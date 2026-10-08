@@ -1,0 +1,678 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Balanceo de línea</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{color-scheme:light}
+[hidden]{display:none!important}
+img{max-width:100%}
+/* Concepto: mesa de trabajo de ingeniería industrial. Datos a la izquierda, resultados a la derecha.
+   Las barras de estación se dibujan a escala del tiempo de ciclo C y la línea naranja marca C. */
+:root{
+  --bg:#EDF0F4; --panel:#F9FAFC; --ink:#142030; --ink2:#4B5B6C;
+  --line:#D2D9E1; --line2:#9AA7B5; --track:#E3E8EE; --hatch:#B3BFCB; --grid:#CBD3DC;
+  --accent:#C2410C; --accent-ink:#FFFFFF;
+  --ok:#17693F; --ok-soft:#DDF1E5; --warn:#8A5A00; --warn-soft:#FBEFD2; --bad:#B42318; --bad-soft:#FCE4E1;
+  --st-s:50%; --st-l:33%; --st-ink:#FFFFFF;
+  --f-display:'Barlow Condensed','Arial Narrow',Arial,sans-serif;
+  --f-body:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --f-mono:'IBM Plex Mono',ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D141C; --panel:#141D28; --ink:#E7EDF3; --ink2:#9DABBA;
+    --line:#263443; --line2:#4C5E71; --track:#1B2733; --hatch:#3A4A5C; --grid:#283644;
+    --accent:#FF8F52; --accent-ink:#1B0E05;
+    --ok:#5FD08F; --ok-soft:#14301F; --warn:#F0B84A; --warn-soft:#33270C; --bad:#FF8A7A; --bad-soft:#3A1713;
+    --st-l:62%; --st-ink:#0D141C; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D141C; --panel:#141D28; --ink:#E7EDF3; --ink2:#9DABBA;
+  --line:#263443; --line2:#4C5E71; --track:#1B2733; --hatch:#3A4A5C; --grid:#283644;
+  --accent:#FF8F52; --accent-ink:#1B0E05;
+  --ok:#5FD08F; --ok-soft:#14301F; --warn:#F0B84A; --warn-soft:#33270C; --bad:#FF8A7A; --bad-soft:#3A1713;
+  --st-l:62%; --st-ink:#0D141C; color-scheme:dark;
+}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 15px/1.55 var(--f-body);
+  padding-inline:clamp(16px,3vw,36px);padding-block:clamp(20px,3vw,40px) 56px}
+.wrap{max-width:1320px;margin-inline:auto}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* Encabezado */
+.top{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,28rem);gap:1rem 3rem;align-items:end;
+  padding-bottom:1.25rem;margin-bottom:1.75rem;border-bottom:1px solid var(--line2)}
+.kicker{font:500 .72rem/1 var(--f-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);margin:0 0 .7rem}
+h1{font:600 clamp(2.6rem,6vw,4.4rem)/.95 var(--f-display);letter-spacing:.015em;text-transform:uppercase;margin:0;text-wrap:balance}
+.lede{margin:0;color:var(--ink2);max-width:46ch}
+@media (max-width:760px){.top{grid-template-columns:minmax(0,1fr)}}
+
+.grid{display:grid;grid-template-columns:minmax(0,25.5rem) minmax(0,1fr);gap:2rem 2.5rem;align-items:start}
+@media (max-width:980px){.grid{grid-template-columns:minmax(0,1fr)}}
+
+h2{font:600 1.6rem/1 var(--f-display);text-transform:uppercase;letter-spacing:.04em;margin:0;text-wrap:balance}
+
+/* Panel de datos */
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:1.1rem 1rem 1.25rem}
+.panel h2{margin-bottom:1rem}
+.f{display:grid;gap:.25rem;font-size:.82rem;color:var(--ink2);min-width:0}
+input,select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line2);border-radius:4px;
+  padding:.4rem .5rem;min-width:0;width:100%}
+input[type=radio]{width:auto;accent-color:var(--accent)}
+input:focus-visible,select:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.grp{border:0;padding:0;margin:1.2rem 0 0;min-width:0}
+.grp legend{padding:0;margin-bottom:.55rem;font:600 .72rem/1.2 var(--f-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--ink)}
+.radios{display:flex;flex-wrap:wrap;gap:.3rem 1.1rem;margin-bottom:.7rem;font-size:.9rem}
+.radios label{display:flex;gap:.4rem;align-items:center}
+.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.7rem}
+.hint{margin:.55rem 0 0;font-size:.8rem;color:var(--ink2)}
+.hint b{font-family:var(--f-mono);font-weight:600;color:var(--ink)}
+.thead,.trow{display:grid;grid-template-columns:3.1rem minmax(0,1fr) 4.3rem 4.9rem 1.9rem;gap:.35rem;align-items:center}
+.thead{font:500 .66rem/1.2 var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ink2);margin:.7rem 0 .3rem}
+.trow{margin-bottom:.35rem}
+.trow input{padding:.32rem .4rem;font-size:.86rem}
+.trow .id{font:600 .85rem var(--f-mono);text-align:center;padding-inline:.2rem}
+.trow .num,.trow .pre{font-family:var(--f-mono);font-size:.82rem}
+.trow .num{text-align:right}
+button{font:inherit}
+.icon{width:1.9rem;height:1.9rem;border:0;background:transparent;color:var(--ink2);font-size:1.25rem;line-height:1;cursor:pointer;border-radius:4px}
+.icon:hover{color:var(--bad);background:var(--bad-soft)}
+.btn{font:600 .85rem/1 var(--f-body);border:1px solid var(--line2);background:transparent;color:var(--ink);padding:.55rem .9rem;border-radius:4px;cursor:pointer}
+.btn:hover{border-color:var(--ink)}
+.actions{margin-top:.6rem}
+.errors{margin:1.1rem 0 0;padding:.7rem .9rem .7rem 1.9rem;background:var(--bad-soft);color:var(--bad);border:1px solid var(--bad);border-radius:4px;font-size:.86rem}
+.errors li+li{margin-top:.2rem}
+
+/* Resultados */
+.block{border-top:2px solid var(--ink);padding-top:.75rem;margin-bottom:2.4rem}
+.bh{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:.2rem 1rem;margin-bottom:.9rem}
+.step{font:500 .72rem/1 var(--f-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--ink2)}
+.empty{border:1px dashed var(--line2);border-radius:6px;padding:2rem 1.2rem;color:var(--ink2)}
+
+.strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(8.5rem,1fr));gap:1.4rem 1.6rem}
+.cell{min-width:0;border-top:2px solid var(--line2);padding-top:.5rem}
+.cell.key{border-top-color:var(--accent)}
+.lab{font:500 .7rem/1.2 var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ink2)}
+.val{font:600 2.7rem/1.05 var(--f-display);font-variant-numeric:tabular-nums;margin-top:.15rem}
+.val small{font:500 .95rem var(--f-mono);color:var(--ink2);margin-left:.3rem}
+.sub{font-size:.8rem;color:var(--ink2);margin-top:.15rem}
+.pill{display:inline-block;padding:.05rem .5rem;border-radius:99px;font:600 .7rem/1.6 var(--f-mono);background:var(--track);color:var(--ink2);white-space:nowrap}
+.pill.ok{background:var(--ok-soft);color:var(--ok)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+
+.seg-ctl{border:0;padding:0;margin:0 0 .7rem;display:flex;flex-wrap:wrap;min-width:0}
+.seg-ctl label{position:relative}
+.seg-ctl input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer}
+.seg-ctl span{display:block;padding:.5rem .85rem;border:1px solid var(--line2);margin:0 -1px -1px 0;font-weight:500;font-size:.88rem}
+.seg-ctl input:checked + span{background:var(--ink);color:var(--bg);border-color:var(--ink);position:relative;z-index:1}
+.seg-ctl input:focus-visible + span{outline:2px solid var(--accent);outline-offset:2px;z-index:2}
+.rule{margin:0 0 1.1rem;color:var(--ink2);font-size:.88rem;max-width:68ch}
+.rule b{color:var(--ink);font-weight:600}
+
+.plot{margin-bottom:.8rem}
+.axis{position:relative;height:1.15rem;font:.7rem/1 var(--f-mono);color:var(--ink2)}
+.axis span{position:absolute;top:0;transform:translateX(-50%);white-space:nowrap}
+.axis span.c{transform:translateX(-100%);color:var(--accent);font-weight:600}
+.stlist{list-style:none;margin:0;padding:0;display:grid;gap:.85rem}
+.sthead{display:flex;flex-wrap:wrap;align-items:baseline;gap:.2rem .8rem;margin-bottom:.3rem}
+.chip{display:inline-grid;place-items:center;min-width:2.1rem;padding:.08rem .4rem;border-radius:3px;font:600 .78rem/1.35 var(--f-mono);
+  background:hsl(var(--h) var(--st-s) var(--st-l));color:var(--st-ink)}
+.sttasks{font-weight:500;overflow-wrap:anywhere;min-width:0}
+.stnums{margin-left:auto;font:.78rem var(--f-mono);color:var(--ink2);font-variant-numeric:tabular-nums}
+.bar{display:flex;height:2rem;background-color:var(--track);
+  background-image:linear-gradient(to right,var(--grid) 1px,transparent 1px);
+  border-right:3px solid var(--accent);overflow:hidden}
+.seg{display:grid;place-items:center;min-width:0;overflow:hidden;font:600 .76rem/1 var(--f-mono);color:var(--st-ink);
+  background:hsl(var(--h) var(--st-s) var(--st-l));border-right:2px solid var(--bg)}
+.idle{background:repeating-linear-gradient(135deg,var(--hatch) 0 3px,transparent 3px 7px)}
+.legend{display:flex;flex-wrap:wrap;gap:.3rem 1.2rem;font-size:.78rem;color:var(--ink2);margin:.2rem 0 1.1rem}
+.legend i{display:inline-block;width:1.1rem;height:.7rem;margin-right:.35rem;vertical-align:-.05rem;background:var(--ink2)}
+.legend i.h{background:repeating-linear-gradient(135deg,var(--hatch) 0 3px,transparent 3px 6px);border:1px solid var(--hatch)}
+.legend i.c{width:3px;background:var(--accent)}
+
+details{margin-top:.4rem}
+summary{cursor:pointer;font-weight:600;font-size:.88rem;padding:.35rem 0}
+.scroll{overflow-x:auto}
+.tbl{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:.88rem}
+.tbl th{font:500 .68rem/1.2 var(--f-mono);letter-spacing:.07em;text-transform:uppercase;color:var(--ink2);text-align:right;padding:.4rem .6rem;border-bottom:1px solid var(--line2);white-space:nowrap}
+.tbl td,.tbl tbody th{padding:.45rem .6rem;border-bottom:1px solid var(--line);text-align:right;font-family:var(--f-mono);font-size:.84rem}
+.tbl th:first-child,.tbl td:first-child{text-align:left}
+.tbl tbody th{text-transform:none;letter-spacing:0;font:500 .86rem var(--f-body);color:var(--ink)}
+.tbl .sel{font-weight:600;color:var(--ink)}
+.tbl tr.on{background:var(--track)}
+
+.diagram{overflow-x:auto;border:1px solid var(--line);border-radius:6px;background:var(--panel);padding:.4rem}
+.diagram svg{display:block;margin-inline:auto;height:auto}
+.edge{fill:none;stroke:var(--line2);stroke-width:1.5}
+.arrow{fill:var(--line2)}
+.node circle{fill:hsl(var(--h) var(--st-s) var(--st-l));stroke:var(--panel);stroke-width:2}
+.node .nid{fill:var(--st-ink);font:600 12px var(--f-mono);text-anchor:middle;dominant-baseline:central}
+.node .tt{fill:var(--ink);font:500 11px var(--f-mono);text-anchor:middle}
+.node .stt{fill:var(--ink2);font:500 10px var(--f-mono);text-anchor:middle;letter-spacing:.04em}
+.chips{display:flex;flex-wrap:wrap;gap:.35rem;margin-top:.7rem;align-items:center;font-size:.8rem;color:var(--ink2)}
+
+.calc{margin:0}
+.calc div{display:grid;grid-template-columns:minmax(9rem,13rem) minmax(0,1fr);gap:.2rem 1.2rem;padding:.6rem 0;border-bottom:1px solid var(--line)}
+.calc dt{font-weight:600;font-size:.86rem}
+.calc dd{margin:0;font:.84rem/1.6 var(--f-mono);overflow-wrap:anywhere}
+@media (max-width:540px){.calc div{grid-template-columns:minmax(0,1fr)}}
+.prose{max-width:70ch;color:var(--ink2);font-size:.9rem}
+.prose p{margin:0 0 .8rem}
+.refs{list-style:none;margin:1rem 0 0;padding:0;font-size:.84rem;color:var(--ink2);max-width:80ch}
+.refs li{padding-left:1.5rem;text-indent:-1.5rem;margin-bottom:.45rem}
+.refs em{color:var(--ink);font-style:italic}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <p class="kicker">Estudio del trabajo · Líneas de producción</p>
+      <h1>Balanceo de línea</h1>
+    </div>
+    <p class="lede">Reparte las tareas de una línea en estaciones de trabajo, respetando la precedencia, para igualar la carga y localizar el cuello de botella.</p>
+  </header>
+
+  <main class="grid">
+    <!-- Datos -->
+    <section class="panel" aria-labelledby="h-datos">
+      <h2 id="h-datos">Datos de la línea</h2>
+
+      <label class="f" for="preset">Cargar un ejemplo
+        <select id="preset">
+          <option value="pc">Ensamble de PC · 12 tareas</option>
+          <option value="diez">Línea de 10 tareas · C = 120 s</option>
+        </select>
+      </label>
+
+      <fieldset class="grp">
+        <legend>Paso 4 · Tiempo de ciclo</legend>
+        <div class="radios">
+          <label for="cm-demanda"><input type="radio" name="cmode" id="cm-demanda" value="demanda">Calcular con la demanda</label>
+          <label for="cm-directo"><input type="radio" name="cmode" id="cm-directo" value="directo">Ya lo conozco</label>
+        </div>
+        <div class="two" id="box-demanda">
+          <label class="f" for="disp">Tiempo disponible por día (min)
+            <input id="disp" type="number" min="0" step="any" inputmode="decimal"></label>
+          <label class="f" for="prod">Producción por día (piezas)
+            <input id="prod" type="number" min="0" step="any" inputmode="decimal"></label>
+        </div>
+        <div id="box-directo" hidden>
+          <label class="f" for="cdirect">Tiempo de ciclo C (<span data-u></span>)
+            <input id="cdirect" type="number" min="0" step="any" inputmode="decimal"></label>
+        </div>
+        <p class="hint" id="chint"></p>
+      </fieldset>
+
+      <fieldset class="grp">
+        <legend>Pasos 1 y 2 · Tareas y precedencias</legend>
+        <label class="f" for="unit">Unidad de los tiempos de tarea
+          <select id="unit">
+            <option value="min">Minutos</option>
+            <option value="s">Segundos</option>
+          </select>
+        </label>
+        <div class="thead" aria-hidden="true"><span>Tarea</span><span>Descripción</span><span style="text-align:right">Tiempo</span><span>Predec.</span><span></span></div>
+        <div id="rows"></div>
+        <div class="actions"><button type="button" class="btn" id="add">Agregar tarea</button></div>
+        <p class="hint">En <b>Predec.</b> escriba las predecesoras inmediatas separadas por coma, por ejemplo <b>3, 4</b>. Déjelo vacío si la tarea puede empezar sola.</p>
+      </fieldset>
+
+      <fieldset class="grp">
+        <legend>Costo (opcional)</legend>
+        <label class="f" for="rate">Mano de obra por hora, por operario
+          <input id="rate" type="number" min="0" step="any" inputmode="decimal" placeholder="Sin costo"></label>
+      </fieldset>
+
+      <ul class="errors" id="errors" role="alert" hidden></ul>
+    </section>
+
+    <!-- Resultados -->
+    <div class="results">
+      <div class="empty" id="placeholder" hidden>Complete los datos para ver el balanceo.</div>
+
+      <div id="out">
+        <section class="block" aria-labelledby="h-res">
+          <div class="bh"><h2 id="h-res">Resultado</h2><span class="step">Pasos 4, 5, 7 y 8</span></div>
+          <div class="strip" id="summary"></div>
+        </section>
+
+        <section class="block" aria-labelledby="h-asig">
+          <div class="bh"><h2 id="h-asig">Asignación de tareas</h2><span class="step">Paso 6</span></div>
+          <fieldset class="seg-ctl">
+            <legend class="sr">Regla de asignación</legend>
+            <label for="h-rpw"><input type="radio" name="heur" id="h-rpw" value="rpw"><span>Peso posicional</span></label>
+            <label for="h-lot"><input type="radio" name="heur" id="h-lot" value="lot"><span>Tarea más larga</span></label>
+            <label for="h-sot"><input type="radio" name="heur" id="h-sot" value="sot"><span>Tarea más corta</span></label>
+            <label for="h-mns"><input type="radio" name="heur" id="h-mns" value="mns"><span>Más sucesoras</span></label>
+          </fieldset>
+          <p class="rule" id="rule"></p>
+          <div class="plot" id="plot"></div>
+          <div class="legend">
+            <span><i></i>Tarea asignada (número de tarea)</span>
+            <span><i class="h"></i>Tiempo muerto</span>
+            <span><i class="c"></i>Tiempo de ciclo C</span>
+          </div>
+          <details open>
+            <summary>Pesos y sucesoras por tarea</summary>
+            <div class="scroll" id="weights"></div>
+          </details>
+        </section>
+
+        <section class="block" aria-labelledby="h-diag">
+          <div class="bh"><h2 id="h-diag">Diagrama de precedencia</h2><span class="step">Paso 3</span></div>
+          <div class="diagram" id="diagram"></div>
+          <div class="chips" id="dchips"></div>
+        </section>
+
+        <section class="block" aria-labelledby="h-cmp">
+          <div class="bh"><h2 id="h-cmp">Comparación de reglas</h2><span class="step">Paso 6</span></div>
+          <div class="scroll" id="compare"></div>
+          <p class="hint" id="cmpnote"></p>
+        </section>
+
+        <section class="block" aria-labelledby="h-calc">
+          <div class="bh"><h2 id="h-calc">Desarrollo numérico</h2><span class="step">Con los datos actuales</span></div>
+          <dl class="calc" id="calc"></dl>
+        </section>
+      </div>
+
+      <section class="block" aria-labelledby="h-fund">
+        <div class="bh"><h2 id="h-fund">Fundamento</h2></div>
+        <div class="prose">
+          <p>Con el tiempo de ciclo C fijo, cada regla reparte las tareas en estaciones hasta agotarlas. Una tarea solo es candidata si sus predecesoras ya están asignadas y si cabe en el tiempo que le queda a la estación abierta. Cuando ninguna cabe, se abre una estación nueva. En la literatura este caso se conoce como SALBP-1 (Scholl y Becker, 2006).</p>
+          <p>El problema es combinatorio. Las reglas de prioridad entregan soluciones factibles que no siempre son óptimas, y el mínimo teórico ⌈T/C⌉ sirve de cota inferior para juzgarlas. Talbot, Patterson y Gehrlein (1986) comparan reglas de este tipo con problemas de prueba.</p>
+        </div>
+        <ul class="refs">
+          <li>Baybars, I. (1986). A survey of exact algorithms for the simple assembly line balancing problem. <em>Management Science, 32</em>(8), 909–932.</li>
+          <li>Jacobs, F. R., y Chase, R. B. (2014). <em>Administración de operaciones: producción y cadena de suministros.</em> McGraw-Hill.</li>
+          <li>Meyers, F. E., y Stephens, M. P. (2006). <em>Diseño de instalaciones de manufactura y manejo de materiales.</em> Pearson Prentice Hall.</li>
+          <li>Nahmias, S. (2014). <em>Análisis de la producción y las operaciones.</em> McGraw-Hill.</li>
+          <li>Niebel, B. W., y Freivalds, A. (2014). <em>Ingeniería industrial: métodos, estándares y diseño del trabajo.</em> McGraw-Hill.</li>
+          <li>Reyna Amador, M. C. (2018). <em>Balanceo de línea</em> [Material de curso, Estudio del Trabajo, Licenciatura en Ingeniería Industrial]. Instituto de Ciencias Básicas e Ingeniería, Universidad Autónoma del Estado de Hidalgo. Origen de los dos ejemplos precargados.</li>
+          <li>Scholl, A., y Becker, C. (2006). State-of-the-art exact and heuristic solution procedures for simple assembly line balancing. <em>European Journal of Operational Research, 168</em>(3), 666–693.</li>
+          <li>Talbot, F. B., Patterson, J. H., y Gehrlein, W. V. (1986). A comparative evaluation of heuristic line balancing techniques. <em>Management Science, 32</em>(4), 430–454.</li>
+        </ul>
+      </section>
+    </div>
+  </main>
+</div>
+
+<script>
+(function(){
+'use strict';
+var EPS=1e-9;
+var $=function(s,r){return (r||document).querySelector(s);};
+var esc=function(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
+var fmt=function(x,d){d=d==null?2:d;var k=Math.pow(10,d);var v=Math.round(x*k)/k;if(Object.is(v,-0))v=0;return String(v);};
+var num=function(x){var v=Number(String(x).replace(',','.'));return isFinite(v)?v:NaN;};
+var hue=function(i){return Math.round((i*137.508+205)%360);};
+var parsePreds=function(s){return String(s==null?'':s).split(/[\s,;]+/).filter(function(p){return p&&!/^[-–—]+$/.test(p);});};
+
+var HNAME={rpw:'Peso posicional',lot:'Tarea más larga',sot:'Tarea más corta',mns:'Más sucesoras'};
+var HRULE={
+  rpw:'<b>Peso posicional.</b> Entra primero la tarea con mayor peso posicional, que es su propio tiempo más el de todas las tareas que dependen de ella. Da prioridad a lo que bloquea más trabajo posterior.',
+  lot:'<b>Tarea más larga.</b> Entra primero la tarea disponible de mayor duración, para acomodar pronto las que más cuesta ubicar.',
+  sot:'<b>Tarea más corta.</b> Entra primero la tarea disponible de menor duración. Sirve de contraste con la regla anterior.',
+  mns:'<b>Más sucesoras.</b> Entra primero la tarea con más tareas siguientes, directas e indirectas. Los empates se resuelven por mayor duración.'
+};
+
+var PRESETS={
+  pc:{unit:'min',cmode:'demanda',disp:'480',prod:'32',cdirect:'15',tasks:[
+    ['1','Taladrar orificios en el gabinete y montar las ménsulas de las unidades de disco',12,''],
+    ['2','Fijar la tarjeta madre al gabinete',6,'1'],
+    ['3','Montar la fuente de poder y unirla con la tarjeta madre',6,'2'],
+    ['4','Colocar el procesador principal y los chips de memoria en la tarjeta madre',2,'2'],
+    ['5','Enchufar la tarjeta de gráficos',2,'2'],
+    ['6','Montar las unidades de disco flexible y unir su controlador y la fuente de poder',12,'2'],
+    ['7','Montar las unidades de disco duro y unir su controlador y la fuente de poder',7,'3, 4'],
+    ['8','Hacer las conexiones apropiadas en la tarjeta madre para la configuración del sistema',5,'7'],
+    ['9','Unir el monitor a la tarjeta de gráficos antes de correr el diagnóstico',1,'5'],
+    ['10','Correr el diagnóstico del sistema',4,'9, 6'],
+    ['11','Sellar el gabinete',6,'8, 10'],
+    ['12','Adherir el logo de la compañía y empacar el sistema',7,'11']
+  ]},
+  diez:{unit:'s',cmode:'directo',disp:'480',prod:'32',cdirect:'120',tasks:[
+    ['1','',40,''],['2','',30,'1'],['3','',50,'1'],['4','',36,'2'],['5','',20,'2'],
+    ['6','',25,'3'],['7','',19,'3'],['8','',10,'4, 5'],['9','',14,'6, 7'],['10','',30,'8, 9']
+  ]}
+};
+
+var state;
+function loadPreset(key,keep){
+  var p=PRESETS[key];
+  state={unit:p.unit,cmode:p.cmode,disp:p.disp,prod:p.prod,cdirect:p.cdirect,
+    rate:keep?keep.rate:'',heur:keep?keep.heur:'rpw',
+    tasks:p.tasks.map(function(r){return {id:r[0],name:r[1],t:String(r[2]),preds:r[3]};})};
+}
+
+/* ---------- Núcleo de cálculo ---------- */
+function analyze(){
+  var errors=[],rows=state.tasks,i;
+  var C=NaN;
+  if(state.cmode==='demanda'){
+    var d=num(state.disp),p=num(state.prod);
+    if(d>0&&p>0)C=d*(state.unit==='s'?60:1)/p;
+    else errors.push('Indique el tiempo disponible por día y la producción por día, ambos mayores que cero.');
+  }else{
+    var c=num(state.cdirect);
+    if(c>0)C=c;else errors.push('Indique un tiempo de ciclo mayor que cero.');
+  }
+  if(!rows.length)errors.push('Agregue al menos una tarea.');
+  var idMap={},ids=[];
+  rows.forEach(function(r,i){
+    var id=String(r.id).trim();ids.push(id);
+    if(!id){errors.push('La fila '+(i+1)+' no tiene identificador.');return;}
+    var k=id.toUpperCase();
+    if(k in idMap)errors.push('El identificador "'+id+'" aparece más de una vez.');else idMap[k]=i;
+  });
+  var t=rows.map(function(r){return num(r.t);});
+  rows.forEach(function(r,i){if(!(t[i]>0))errors.push('La tarea '+(ids[i]||('de la fila '+(i+1)))+' necesita un tiempo mayor que cero.');});
+  var preds=rows.map(function(){return [];});
+  rows.forEach(function(r,i){
+    parsePreds(r.preds).forEach(function(pp){
+      var j=idMap[pp.toUpperCase()];
+      if(j===undefined)errors.push('La tarea '+ids[i]+' tiene como predecesora a "'+pp+'", que no existe.');
+      else if(j===i)errors.push('La tarea '+ids[i]+' no puede ser su propia predecesora.');
+      else if(preds[i].indexOf(j)<0)preds[i].push(j);
+    });
+  });
+  if(errors.length)return {errors:errors,C:C};
+  var n=rows.length;
+  var big=[];
+  for(i=0;i<n;i++)if(t[i]>C+EPS)big.push(ids[i]);
+  if(big.length){
+    errors.push(big.length>1
+      ? 'Las tareas '+big.join(', ')+' duran más que el tiempo de ciclo ('+fmt(C)+' '+(state.unit==='s'?'s':'min')+'). Aumente C o divida esas tareas.'
+      : 'La tarea '+big[0]+' dura más que el tiempo de ciclo ('+fmt(C)+' '+(state.unit==='s'?'s':'min')+'). Aumente C o divida la tarea.');
+    return {errors:errors,C:C};
+  }
+  var succs=rows.map(function(){return [];});
+  preds.forEach(function(ps,i){ps.forEach(function(p){succs[p].push(i);});});
+  var indeg=preds.map(function(p){return p.length;}),order=[],used=new Array(n).fill(false);
+  for(var step=0;step<n;step++){
+    var pick=-1;
+    for(i=0;i<n;i++)if(!used[i]&&indeg[i]===0){pick=i;break;}
+    if(pick<0)break;
+    used[pick]=true;order.push(pick);
+    succs[pick].forEach(function(s){indeg[s]--;});
+  }
+  if(order.length<n){
+    var bad=[];for(i=0;i<n;i++)if(!used[i])bad.push(ids[i]);
+    errors.push('Las precedencias forman un ciclo. Revise las tareas '+bad.join(', ')+'.');
+    return {errors:errors,C:C};
+  }
+  var rank=new Array(n);order.forEach(function(v,k){rank[v]=k;});
+  var after=rows.map(function(){return {};}),cnt=new Array(n).fill(0),w=new Array(n).fill(0),level=new Array(n).fill(0);
+  for(var k=n-1;k>=0;k--){
+    var v=order[k];
+    succs[v].forEach(function(s){after[v][s]=1;Object.keys(after[s]).forEach(function(x){after[v][x]=1;});});
+    var keys=Object.keys(after[v]);
+    cnt[v]=keys.length;
+    w[v]=t[v]+keys.reduce(function(a,x){return a+t[+x];},0);
+  }
+  order.forEach(function(v){succs[v].forEach(function(s){level[s]=Math.max(level[s],level[v]+1);});});
+  var T=t.reduce(function(a,b){return a+b;},0);
+  var score={rpw:function(i){return w[i];},lot:function(i){return t[i];},sot:function(i){return -t[i];},mns:function(i){return cnt[i];}};
+  function run(key){
+    var sc=score[key],done=new Array(n).fill(false),stOf=new Array(n).fill(-1),stations=[],left=n;
+    function better(a,b){
+      var d=sc(a)-sc(b);if(Math.abs(d)>EPS)return d>0;
+      if(Math.abs(t[a]-t[b])>EPS)return t[a]>t[b];
+      return false;
+    }
+    while(left>0){
+      var st={tasks:[],time:0};
+      for(;;){
+        var best=-1;
+        for(var i=0;i<n;i++){
+          if(done[i]||t[i]>C-st.time+EPS)continue;
+          if(!preds[i].every(function(p){return done[p];}))continue;
+          if(best<0||better(i,best))best=i;
+        }
+        if(best<0)break;
+        done[best]=true;stOf[best]=stations.length;st.tasks.push(best);st.time+=t[best];left--;
+      }
+      st.tasks.sort(function(a,b){return rank[a]-rank[b];});
+      st.idle=Math.max(0,C-st.time);
+      stations.push(st);
+    }
+    var N=stations.length,TM=N*C-T,E=T/(N*C)*100;
+    var maxTime=Math.max.apply(null,stations.map(function(s){return s.time;}));
+    var bn=[];stations.forEach(function(s,i){if(s.time>=maxTime-EPS)bn.push(i);});
+    return {key:key,stations:stations,stOf:stOf,N:N,TM:TM,E:E,d:100-E,maxTime:maxTime,bn:bn};
+  }
+  var all={rpw:run('rpw'),lot:run('lot'),sot:run('sot'),mns:run('mns')};
+  var raw=T/C;
+  return {errors:[],n:n,ids:ids,names:rows.map(function(r){return r.name;}),t:t,preds:preds,succs:succs,
+    w:w,cnt:cnt,level:level,T:T,C:C,raw:raw,Nt:Math.ceil(raw-1e-9),all:all,u:state.unit==='s'?'s':'min'};
+}
+
+/* ---------- Dibujo ---------- */
+function niceStep(C){
+  var b=[1,2,5];
+  for(var p=-2;p<=7;p++)for(var j=0;j<3;j++){var s=b[j]*Math.pow(10,p);if(C/s<=6.0001)return s;}
+  return C;
+}
+function chip(i){return '<span class="chip" style="--h:'+hue(i)+'">E'+(i+1)+'</span>';}
+
+function renderStations(m,R){
+  var C=m.C,u=m.u,step=niceStep(C),ticks='';
+  for(var k=0;k*step<=C+EPS;k++){
+    var v=k*step;
+    if(v<C-EPS&&(C-v)/C<0.07)continue;
+    if(v>=C-EPS)continue;
+    ticks+='<span style="left:'+(v/C*100)+'%">'+fmt(v)+'</span>';
+  }
+  ticks+='<span class="c" style="left:100%">C = '+fmt(C)+' '+u+'</span>';
+  var list=R.stations.map(function(st,si){
+    var segs=st.tasks.map(function(i){
+      var tt='Tarea '+m.ids[i]+' · '+fmt(m.t[i])+' '+u+(m.names[i]?' · '+m.names[i]:'');
+      return '<span class="seg" style="width:'+(m.t[i]/C*100)+'%" title="'+esc(tt)+'">'+esc(m.ids[i])+'</span>';
+    }).join('');
+    var idle=st.idle>EPS?'<span class="idle" style="width:'+(st.idle/C*100)+'%" title="Tiempo muerto: '+fmt(st.idle)+' '+u+'"></span>':'';
+    var names=st.tasks.map(function(i){return esc(m.ids[i]);}).join(' · ');
+    return '<li style="--h:'+hue(si)+'"><div class="sthead">'+chip(si)+
+      '<span class="sttasks">'+(st.tasks.length>1?'Tareas ':'Tarea ')+names+'</span>'+
+      '<span class="stnums">'+fmt(st.time)+' / '+fmt(C)+' '+u+' · muerto '+fmt(st.idle)+' · carga '+fmt(st.time/C*100,0)+' %</span></div>'+
+      '<div class="bar" style="background-size:'+(step/C*100)+'% 100%">'+segs+idle+'</div></li>';
+  }).join('');
+  $('#plot').innerHTML='<div class="axis" aria-hidden="true">'+ticks+'</div><ol class="stlist">'+list+'</ol>';
+}
+
+function renderWeights(m,R){
+  var h=state.heur;
+  var head='<tr><th>Tarea</th><th>Tiempo ('+m.u+')</th><th>Predecesoras</th><th>Sucesoras</th><th>Peso posicional</th><th>Estación</th></tr>';
+  var body=m.ids.map(function(id,i){
+    var pr=m.preds[i].map(function(p){return esc(m.ids[p]);}).join(', ')||'—';
+    return '<tr><td>'+esc(id)+'</td><td class="'+(h==='lot'||h==='sot'?'sel':'')+'">'+fmt(m.t[i])+'</td><td>'+pr+'</td>'+
+      '<td class="'+(h==='mns'?'sel':'')+'">'+m.cnt[i]+'</td><td class="'+(h==='rpw'?'sel':'')+'">'+fmt(m.w[i])+'</td>'+
+      '<td>'+chip(R.stOf[i])+'</td></tr>';
+  }).join('');
+  $('#weights').innerHTML='<table class="tbl"><thead>'+head+'</thead><tbody>'+body+'</tbody></table>';
+}
+
+function renderDiagram(m,R){
+  var n=m.n,L=Math.max.apply(null,m.level)+1,cols=[],i,l;
+  for(l=0;l<L;l++)cols.push([]);
+  for(i=0;i<n;i++)cols[m.level[i]].push(i);
+  var y=new Array(n).fill(0);
+  function setY(){cols.forEach(function(c){c.forEach(function(v,k){y[v]=k-(c.length-1)/2;});});}
+  setY();
+  function bary(v,list){return list.length?list.reduce(function(s,u){return s+y[u];},0)/list.length:y[v];}
+  for(var it=0;it<6;it++){
+    for(l=1;l<L;l++){cols[l].sort(function(a,b){return bary(a,m.preds[a])-bary(b,m.preds[b])||a-b;});setY();}
+    for(l=L-2;l>=0;l--){cols[l].sort(function(a,b){return bary(a,m.succs[a])-bary(b,m.succs[b])||a-b;});setY();}
+  }
+  var gx=90,gy=68,r=17,padX=r+24,padY=r+28;
+  var maxM=Math.max.apply(null,cols.map(function(c){return c.length;}));
+  var W=(L-1)*gx+2*padX,H=(maxM-1)*gy+2*padY,cy=H/2;
+  var X=function(v){return padX+m.level[v]*gx;},Y=function(v){return cy+y[v]*gy;};
+  var edges='',nodes='';
+  for(i=0;i<n;i++)m.succs[i].forEach(function(s){
+    var x1=X(i)+r,y1=Y(i),x2=X(s)-r-2,y2=Y(s),d=Math.max(26,(x2-x1)*0.45);
+    edges+='<path class="edge" marker-end="url(#ah)" d="M'+x1+' '+y1+' C'+(x1+d)+' '+y1+' '+(x2-d)+' '+y2+' '+x2+' '+y2+'"/>';
+  });
+  for(i=0;i<n;i++){
+    var si=R.stOf[i],id=m.ids[i];
+    var tip='Tarea '+id+' · '+fmt(m.t[i])+' '+m.u+' · estación E'+(si+1)+(m.names[i]?' · '+m.names[i]:'');
+    nodes+='<g class="node" style="--h:'+hue(si)+'"><title>'+esc(tip)+'</title>'+
+      '<circle cx="'+X(i)+'" cy="'+Y(i)+'" r="'+r+'"/>'+
+      '<text class="nid" x="'+X(i)+'" y="'+Y(i)+'"'+(id.length>2?' style="font-size:10px"':'')+'>'+esc(id)+'</text>'+
+      '<text class="tt" x="'+X(i)+'" y="'+(Y(i)-r-6)+'">'+fmt(m.t[i])+'</text>'+
+      '<text class="stt" x="'+X(i)+'" y="'+(Y(i)+r+14)+'">E'+(si+1)+'</text></g>';
+  }
+  $('#diagram').innerHTML='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Diagrama de precedencia de '+n+' tareas, coloreado por estación" '+
+    'style="width:100%;min-width:'+W+'px;max-width:'+Math.round(W*1.35)+'px">'+
+    '<defs><marker id="ah" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path class="arrow" d="M0 0L8 4L0 8z"/></marker></defs>'+
+    edges+nodes+'</svg>';
+  $('#dchips').innerHTML='<span>Color y etiqueta indican la estación asignada. Sobre cada nodo, el tiempo en '+m.u+'.</span>'+
+    R.stations.map(function(s,k){return chip(k);}).join('');
+}
+
+function renderCompare(m){
+  var keys=['rpw','lot','sot','mns'];
+  var minN=Math.min.apply(null,keys.map(function(k){return m.all[k].N;}));
+  var allSame=keys.every(function(k){return m.all[k].N===minN;});
+  var body=keys.map(function(k){
+    var R=m.all[k],on=k===state.heur;
+    return '<tr class="'+(on?'on':'')+'"><th scope="row">'+HNAME[k]+(on?' <span class="pill">en pantalla</span>':'')+'</th>'+
+      '<td>'+R.N+(R.N===minN?' <span class="pill ok">menor</span>':'')+'</td><td>'+fmt(R.E,1)+' %</td><td>'+fmt(R.d,1)+' %</td>'+
+      '<td>'+fmt(R.TM)+' '+m.u+'</td><td>'+fmt(R.maxTime)+' '+m.u+'</td></tr>';
+  }).join('');
+  $('#compare').innerHTML='<table class="tbl"><thead><tr><th>Regla</th><th>Estaciones</th><th>Eficiencia</th><th>Retraso</th><th>Tiempo muerto</th><th>Estación más lenta</th></tr></thead><tbody>'+body+'</tbody></table>';
+  $('#cmpnote').textContent='Mínimo teórico: '+m.Nt+' estaciones. '+(allSame?'Las cuatro reglas llegan al mismo número de estaciones.':'Las reglas no coinciden, así que conviene comparar antes de elegir.');
+}
+
+function renderCalc(m,R){
+  var u=m.u,rows=[],N=R.N;
+  if(state.cmode==='demanda'){
+    rows.push(['Paso 4 · Tiempo de ciclo','C = tiempo disponible ÷ producción = '+fmt(num(state.disp))+' min'+(state.unit==='s'?' × 60 s/min':'')+' ÷ '+fmt(num(state.prod))+' = '+fmt(m.C)+' '+u]);
+  }else{
+    rows.push(['Paso 4 · Tiempo de ciclo','C = '+fmt(m.C)+' '+u+' (dato)']);
+  }
+  rows.push(['Contenido de trabajo','T = Σ t<sub>i</sub> = '+m.t.map(function(x){return fmt(x);}).join(' + ')+' = '+fmt(m.T)+' '+u]);
+  rows.push(['Paso 5 · Estaciones mínimas','N<sub>t</sub> = T ÷ C = '+fmt(m.T)+' ÷ '+fmt(m.C)+' = '+fmt(m.raw)+', que se redondea al entero superior: '+m.Nt]);
+  rows.push(['Tiempo muerto','TM = N × C − T = '+N+' × '+fmt(m.C)+' − '+fmt(m.T)+' = '+fmt(R.TM)+' '+u]);
+  rows.push(['Paso 7 · Eficiencia','E = T ÷ (N × C) × 100 = '+fmt(m.T)+' ÷ ('+N+' × '+fmt(m.C)+') × 100 = '+fmt(R.E,1)+' %']);
+  rows.push(['Paso 8 · Retraso de balance','d = TM ÷ (N × C) × 100 = '+fmt(R.TM)+' ÷ ('+N+' × '+fmt(m.C)+') × 100 = '+fmt(R.d,1)+' %']);
+  var rate=num(state.rate);
+  if(rate>0){
+    var Ch=u==='s'?m.C/3600:m.C/60;
+    rows.push(['Costo de mano de obra','Costo por pieza = N × C(h) × costo por hora = '+N+' × '+fmt(Ch,4)+' h × '+fmt(rate)+' = '+fmt(N*Ch*rate)]);
+  }
+  $('#calc').innerHTML=rows.map(function(r){return '<div><dt>'+r[0]+'</dt><dd>'+r[1]+'</dd></div>';}).join('');
+}
+
+function renderResults(){
+  var m=window.__model,R=m.all[state.heur],u=m.u;
+  $('#rule').innerHTML=HRULE[state.heur];
+  var cell=function(lab,val,sub,cls){return '<div class="cell '+(cls||'')+'"><div class="lab">'+lab+'</div><div class="val">'+val+'</div><div class="sub">'+sub+'</div></div>';};
+  var un=function(x){return x+'<small>'+u+'</small>';};
+  var bnChips=R.bn.map(function(i){return chip(i);}).join(' ');
+  var cells=[
+    cell('Tiempo de ciclo C',un(fmt(m.C)),'Tiempo máximo por estación'),
+    cell('Trabajo total T',un(fmt(m.T)),m.n+(m.n===1?' tarea':' tareas')),
+    cell('Estaciones mínimas',String(m.Nt),'T ÷ C = '+fmt(m.raw)+', entero superior'),
+    cell('Estaciones asignadas',String(R.N),R.N===m.Nt?'<span class="pill ok">Igual al mínimo</span>':'<span class="pill warn">+'+(R.N-m.Nt)+' sobre el mínimo</span>'),
+    cell('Estación más lenta',un(fmt(R.maxTime)),bnChips+' marca la velocidad de la línea'),
+    cell('Eficiencia','<span>'+fmt(R.E,1)+'</span><small>%</small>','Uso real de la mano de obra','key'),
+    cell('Retraso de balance','<span>'+fmt(R.d,1)+'</span><small>%</small>','Mano de obra ociosa')
+  ];
+  var rate=num(state.rate);
+  if(rate>0){
+    var Ch=u==='s'?m.C/3600:m.C/60;
+    cells.push(cell('Mano de obra por pieza',fmt(R.N*Ch*rate),'N × C × costo por hora'));
+  }
+  $('#summary').innerHTML=cells.join('');
+  renderStations(m,R);renderWeights(m,R);renderDiagram(m,R);renderCompare(m);renderCalc(m,R);
+}
+
+/* ---------- Formulario ---------- */
+function renderRows(){
+  $('#rows').innerHTML=state.tasks.map(function(r,i){
+    var id=esc(r.id);
+    return '<div class="trow" data-i="'+i+'">'+
+      '<input class="id" id="r'+i+'-id" data-f="id" maxlength="6" aria-label="Identificador de la fila '+(i+1)+'" value="'+id+'">'+
+      '<input id="r'+i+'-name" data-f="name" placeholder="Descripción" aria-label="Descripción de la tarea '+id+'" value="'+esc(r.name)+'">'+
+      '<input class="num" id="r'+i+'-t" data-f="t" type="number" min="0" step="any" inputmode="decimal" aria-label="Tiempo de la tarea '+id+'" value="'+esc(r.t)+'">'+
+      '<input class="pre" id="r'+i+'-preds" data-f="preds" placeholder="—" aria-label="Predecesoras de la tarea '+id+'" value="'+esc(r.preds)+'">'+
+      '<button type="button" class="icon" data-del title="Eliminar" aria-label="Eliminar la tarea '+id+'">×</button></div>';
+  }).join('');
+}
+function syncInputs(){
+  $('#preset').value=$('#preset').value;
+  $('#unit').value=state.unit;
+  $('#disp').value=state.disp;$('#prod').value=state.prod;$('#cdirect').value=state.cdirect;$('#rate').value=state.rate;
+  $('#cm-demanda').checked=state.cmode==='demanda';$('#cm-directo').checked=state.cmode==='directo';
+  $('#box-demanda').hidden=state.cmode!=='demanda';$('#box-directo').hidden=state.cmode!=='directo';
+  ['rpw','lot','sot','mns'].forEach(function(k){$('#h-'+k).checked=state.heur===k;});
+  setUnits();
+}
+function setUnits(){
+  var u=state.unit==='s'?'s':'min';
+  Array.prototype.forEach.call(document.querySelectorAll('[data-u]'),function(e){e.textContent=u;});
+}
+function update(){
+  var res=analyze(),u=state.unit==='s'?'s':'min';
+  var errs=$('#errors');
+  $('#chint').innerHTML=res.C>0?'Tiempo de ciclo <b>C = '+fmt(res.C)+' '+u+'</b>':'';
+  if(res.errors.length){
+    errs.innerHTML=res.errors.map(function(e){return '<li>'+esc(e)+'</li>';}).join('');
+    errs.hidden=false;$('#out').hidden=true;$('#placeholder').hidden=false;
+    window.__model=null;return;
+  }
+  errs.hidden=true;errs.innerHTML='';
+  $('#placeholder').hidden=true;$('#out').hidden=false;
+  window.__model=res;renderResults();
+}
+
+$('#rows').addEventListener('input',function(e){
+  var row=e.target.closest('.trow'),f=e.target.dataset.f;
+  if(!row||!f)return;
+  state.tasks[+row.dataset.i][f]=e.target.value;update();
+});
+$('#rows').addEventListener('click',function(e){
+  var b=e.target.closest('[data-del]');if(!b)return;
+  var i=+b.closest('.trow').dataset.i,gone=String(state.tasks[i].id).trim().toUpperCase();
+  state.tasks.splice(i,1);
+  state.tasks.forEach(function(r){r.preds=parsePreds(r.preds).filter(function(p){return p.toUpperCase()!==gone;}).join(', ');});
+  renderRows();update();
+});
+$('#add').addEventListener('click',function(){
+  var nums=state.tasks.map(function(r){return parseInt(r.id,10);}).filter(isFinite);
+  var next=(nums.length?Math.max.apply(null,nums):0)+1;
+  state.tasks.push({id:String(next),name:'',t:'',preds:''});
+  renderRows();update();
+  var inp=$('#r'+(state.tasks.length-1)+'-t');if(inp)inp.focus();
+});
+$('#preset').addEventListener('change',function(e){
+  loadPreset(e.target.value,{rate:state.rate,heur:state.heur});
+  syncInputs();renderRows();update();
+});
+$('#unit').addEventListener('change',function(e){state.unit=e.target.value;setUnits();update();});
+Array.prototype.forEach.call(document.querySelectorAll('input[name=cmode]'),function(r){
+  r.addEventListener('change',function(e){
+    state.cmode=e.target.value;
+    $('#box-demanda').hidden=state.cmode!=='demanda';$('#box-directo').hidden=state.cmode!=='directo';update();
+  });
+});
+['disp','prod','cdirect','rate'].forEach(function(k){
+  $('#'+k).addEventListener('input',function(e){state[k]=e.target.value;update();});
+});
+Array.prototype.forEach.call(document.querySelectorAll('input[name=heur]'),function(r){
+  r.addEventListener('change',function(e){state.heur=e.target.value;if(window.__model)renderResults();});
+});
+
+loadPreset('pc');
+syncInputs();renderRows();update();
+})();
+</script>
+</body>
+</html>
