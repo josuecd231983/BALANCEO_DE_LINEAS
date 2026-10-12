@@ -166,6 +166,14 @@ summary{cursor:pointer;font-weight:600;font-size:.88rem;padding:.35rem 0}
 .refs{list-style:none;margin:1rem 0 0;padding:0;font-size:.84rem;color:var(--ink2);max-width:80ch}
 .refs li{padding-left:1.5rem;text-indent:-1.5rem;margin-bottom:.45rem}
 .refs em{color:var(--ink);font-style:italic}
+textarea{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line2);border-radius:4px;padding:.45rem .55rem;min-width:0;width:100%;resize:vertical;min-height:8rem;line-height:1.5}
+textarea:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.grp.first{margin-top:0}
+.stack{display:grid;gap:.7rem}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);padding:.65rem 1.1rem}
+.btn.primary:hover{filter:brightness(1.08);border-color:var(--accent)}
+.bh .tools{display:flex;align-items:center;flex-wrap:wrap;gap:.5rem 1rem}
+.pdfmsg{margin:-.4rem 0 .9rem;padding:.5rem .7rem;background:var(--bad-soft);color:var(--bad);border:1px solid var(--bad);border-radius:4px;font-size:.84rem}
 </style>
 </head>
 <body>
@@ -184,12 +192,18 @@ summary{cursor:pointer;font-weight:600;font-size:.88rem;padding:.35rem 0}
     <section class="panel" aria-labelledby="h-datos">
       <h2 id="h-datos">Datos de la línea</h2>
 
-      <label class="f" for="preset">Cargar un ejemplo
-        <select id="preset">
-          <option value="pc">Ensamble de PC · 12 tareas</option>
-          <option value="diez">Línea de 10 tareas · C = 120 s</option>
-        </select>
-      </label>
+      <fieldset class="grp first">
+        <legend>Enunciado del problema</legend>
+        <div class="stack">
+          <label class="f" for="ititle">Título del estudio
+            <input id="ititle" type="text" autocomplete="off" placeholder="Escriba el título"></label>
+          <label class="f" for="iauthor">Elaboró
+            <input id="iauthor" type="text" autocomplete="name" placeholder="Nombre de quien elabora el estudio"></label>
+          <label class="f" for="istatement">Enunciado
+            <textarea id="istatement" placeholder="Escriba o pegue aquí el texto del problema"></textarea></label>
+        </div>
+        <p class="hint">El título, el autor y el enunciado se incluyen en el PDF.</p>
+      </fieldset>
 
       <fieldset class="grp">
         <legend>Paso 4 · Tiempo de ciclo</legend>
@@ -224,22 +238,17 @@ summary{cursor:pointer;font-weight:600;font-size:.88rem;padding:.35rem 0}
         <p class="hint">En <b>Predec.</b> escriba las predecesoras inmediatas separadas por coma, por ejemplo <b>3, 4</b>. Déjelo vacío si la tarea puede empezar sola.</p>
       </fieldset>
 
-      <fieldset class="grp">
-        <legend>Costo (opcional)</legend>
-        <label class="f" for="rate">Mano de obra por hora, por operario
-          <input id="rate" type="number" min="0" step="any" inputmode="decimal" placeholder="Sin costo"></label>
-      </fieldset>
-
       <ul class="errors" id="errors" role="alert" hidden></ul>
     </section>
 
     <!-- Resultados -->
     <div class="results">
-      <div class="empty" id="placeholder" hidden>Complete los datos para ver el balanceo.</div>
+      <div class="empty" id="placeholder">Escriba el enunciado, el tiempo de ciclo y las tareas con sus tiempos y predecesoras. El balanceo aparece aquí cuando los datos estén completos y sin errores.</div>
 
       <div id="out">
         <section class="block" aria-labelledby="h-res">
-          <div class="bh"><h2 id="h-res">Resultado</h2><span class="step">Pasos 4, 5, 7 y 8</span></div>
+          <div class="bh"><h2 id="h-res">Resultado</h2><div class="tools"><span class="step">Pasos 4, 5, 7 y 8</span><button type="button" class="btn primary" id="pdf">Descargar estudio en PDF</button></div></div>
+          <p class="pdfmsg" id="pdfmsg" role="status" hidden></p>
           <div class="strip" id="summary"></div>
         </section>
 
@@ -295,7 +304,7 @@ summary{cursor:pointer;font-weight:600;font-size:.88rem;padding:.35rem 0}
           <li>Meyers, F. E., y Stephens, M. P. (2006). <em>Diseño de instalaciones de manufactura y manejo de materiales.</em> Pearson Prentice Hall.</li>
           <li>Nahmias, S. (2014). <em>Análisis de la producción y las operaciones.</em> McGraw-Hill.</li>
           <li>Niebel, B. W., y Freivalds, A. (2014). <em>Ingeniería industrial: métodos, estándares y diseño del trabajo.</em> McGraw-Hill.</li>
-          <li>Reyna Amador, M. C. (2018). <em>Balanceo de línea</em> [Material de curso, Estudio del Trabajo, Licenciatura en Ingeniería Industrial]. Instituto de Ciencias Básicas e Ingeniería, Universidad Autónoma del Estado de Hidalgo. Origen de los dos ejemplos precargados.</li>
+          <li>Reyna Amador, M. C. (2018). <em>Balanceo de línea</em> [Material didáctico, Estudio del Trabajo, Licenciatura en Ingeniería Industrial]. Instituto de Ciencias Básicas e Ingeniería, Área Académica de Ingeniería y Arquitectura, Universidad Autónoma del Estado de Hidalgo. Metodología de ocho pasos en que se basa esta aplicación.</li>
           <li>Scholl, A., y Becker, C. (2006). State-of-the-art exact and heuristic solution procedures for simple assembly line balancing. <em>European Journal of Operational Research, 168</em>(3), 666–693.</li>
           <li>Talbot, F. B., Patterson, J. H., y Gehrlein, W. V. (1986). A comparative evaluation of heuristic line balancing techniques. <em>Management Science, 32</em>(4), 430–454.</li>
         </ul>
@@ -304,6 +313,7 @@ summary{cursor:pointer;font-weight:600;font-size:.88rem;padding:.35rem 0}
   </main>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
 (function(){
 'use strict';
@@ -323,38 +333,18 @@ var HRULE={
   mns:'<b>Más sucesoras.</b> Entra primero la tarea con más tareas siguientes, directas e indirectas. Los empates se resuelven por mayor duración.'
 };
 
-var PRESETS={
-  pc:{unit:'min',cmode:'demanda',disp:'480',prod:'32',cdirect:'15',tasks:[
-    ['1','Taladrar orificios en el gabinete y montar las ménsulas de las unidades de disco',12,''],
-    ['2','Fijar la tarjeta madre al gabinete',6,'1'],
-    ['3','Montar la fuente de poder y unirla con la tarjeta madre',6,'2'],
-    ['4','Colocar el procesador principal y los chips de memoria en la tarjeta madre',2,'2'],
-    ['5','Enchufar la tarjeta de gráficos',2,'2'],
-    ['6','Montar las unidades de disco flexible y unir su controlador y la fuente de poder',12,'2'],
-    ['7','Montar las unidades de disco duro y unir su controlador y la fuente de poder',7,'3, 4'],
-    ['8','Hacer las conexiones apropiadas en la tarjeta madre para la configuración del sistema',5,'7'],
-    ['9','Unir el monitor a la tarjeta de gráficos antes de correr el diagnóstico',1,'5'],
-    ['10','Correr el diagnóstico del sistema',4,'9, 6'],
-    ['11','Sellar el gabinete',6,'8, 10'],
-    ['12','Adherir el logo de la compañía y empacar el sistema',7,'11']
-  ]},
-  diez:{unit:'s',cmode:'directo',disp:'480',prod:'32',cdirect:'120',tasks:[
-    ['1','',40,''],['2','',30,'1'],['3','',50,'1'],['4','',36,'2'],['5','',20,'2'],
-    ['6','',25,'3'],['7','',19,'3'],['8','',10,'4, 5'],['9','',14,'6, 7'],['10','',30,'8, 9']
-  ]}
-};
+var state={unit:'min',cmode:'demanda',disp:'',prod:'',cdirect:'',heur:'rpw',title:'',author:'',statement:'',
+  tasks:[1,2,3].map(function(n){return {id:String(n),name:'',t:'',preds:''};})};
 
-var state;
-function loadPreset(key,keep){
-  var p=PRESETS[key];
-  state={unit:p.unit,cmode:p.cmode,disp:p.disp,prod:p.prod,cdirect:p.cdirect,
-    rate:keep?keep.rate:'',heur:keep?keep.heur:'rpw',
-    tasks:p.tasks.map(function(r){return {id:r[0],name:r[1],t:String(r[2]),preds:r[3]};})};
+/* Una fila que solo trae el número automático se ignora */
+function blankRow(r){return !String(r.t).trim()&&!String(r.name).trim()&&!String(r.preds).trim();}
+function isEmptyForm(){
+  return state.tasks.every(blankRow)&&!String(state.disp).trim()&&!String(state.prod).trim()&&!String(state.cdirect).trim();
 }
 
 /* ---------- Núcleo de cálculo ---------- */
 function analyze(){
-  var errors=[],rows=state.tasks,i;
+  var errors=[],rows=state.tasks.filter(function(r){return !blankRow(r);}),i;
   var C=NaN;
   if(state.cmode==='demanda'){
     var d=num(state.disp),p=num(state.prod);
@@ -498,7 +488,7 @@ function renderWeights(m,R){
   $('#weights').innerHTML='<table class="tbl"><thead>'+head+'</thead><tbody>'+body+'</tbody></table>';
 }
 
-function renderDiagram(m,R){
+function layoutDiagram(m){
   var n=m.n,L=Math.max.apply(null,m.level)+1,cols=[],i,l;
   for(l=0;l<L;l++)cols.push([]);
   for(i=0;i<n;i++)cols[m.level[i]].push(i);
@@ -512,8 +502,14 @@ function renderDiagram(m,R){
   }
   var gx=90,gy=68,r=17,padX=r+24,padY=r+28;
   var maxM=Math.max.apply(null,cols.map(function(c){return c.length;}));
-  var W=(L-1)*gx+2*padX,H=(maxM-1)*gy+2*padY,cy=H/2;
-  var X=function(v){return padX+m.level[v]*gx;},Y=function(v){return cy+y[v]*gy;};
+  var W=(L-1)*gx+2*padX,H=(maxM-1)*gy+2*padY,cy=H/2,pos=[];
+  for(i=0;i<n;i++)pos.push({x:padX+m.level[i]*gx,y:cy+y[i]*gy});
+  return {W:W,H:H,r:r,pos:pos};
+}
+
+function renderDiagram(m,R){
+  var n=m.n,Ly=layoutDiagram(m),r=Ly.r,W=Ly.W,H=Ly.H,i;
+  var X=function(v){return Ly.pos[v].x;},Y=function(v){return Ly.pos[v].y;};
   var edges='',nodes='';
   for(i=0;i<n;i++)m.succs[i].forEach(function(s){
     var x1=X(i)+r,y1=Y(i),x2=X(s)-r-2,y2=Y(s),d=Math.max(26,(x2-x1)*0.45);
@@ -550,7 +546,7 @@ function renderCompare(m){
   $('#cmpnote').textContent='Mínimo teórico: '+m.Nt+' estaciones. '+(allSame?'Las cuatro reglas llegan al mismo número de estaciones.':'Las reglas no coinciden, así que conviene comparar antes de elegir.');
 }
 
-function renderCalc(m,R){
+function calcRows(m,R){
   var u=m.u,rows=[],N=R.N;
   if(state.cmode==='demanda'){
     rows.push(['Paso 4 · Tiempo de ciclo','C = tiempo disponible ÷ producción = '+fmt(num(state.disp))+' min'+(state.unit==='s'?' × 60 s/min':'')+' ÷ '+fmt(num(state.prod))+' = '+fmt(m.C)+' '+u]);
@@ -562,12 +558,10 @@ function renderCalc(m,R){
   rows.push(['Tiempo muerto','TM = N × C − T = '+N+' × '+fmt(m.C)+' − '+fmt(m.T)+' = '+fmt(R.TM)+' '+u]);
   rows.push(['Paso 7 · Eficiencia','E = T ÷ (N × C) × 100 = '+fmt(m.T)+' ÷ ('+N+' × '+fmt(m.C)+') × 100 = '+fmt(R.E,1)+' %']);
   rows.push(['Paso 8 · Retraso de balance','d = TM ÷ (N × C) × 100 = '+fmt(R.TM)+' ÷ ('+N+' × '+fmt(m.C)+') × 100 = '+fmt(R.d,1)+' %']);
-  var rate=num(state.rate);
-  if(rate>0){
-    var Ch=u==='s'?m.C/3600:m.C/60;
-    rows.push(['Costo de mano de obra','Costo por pieza = N × C(h) × costo por hora = '+N+' × '+fmt(Ch,4)+' h × '+fmt(rate)+' = '+fmt(N*Ch*rate)]);
-  }
-  $('#calc').innerHTML=rows.map(function(r){return '<div><dt>'+r[0]+'</dt><dd>'+r[1]+'</dd></div>';}).join('');
+  return rows;
+}
+function renderCalc(m,R){
+  $('#calc').innerHTML=calcRows(m,R).map(function(r){return '<div><dt>'+r[0]+'</dt><dd>'+r[1]+'</dd></div>';}).join('');
 }
 
 function renderResults(){
@@ -585,13 +579,216 @@ function renderResults(){
     cell('Eficiencia','<span>'+fmt(R.E,1)+'</span><small>%</small>','Uso real de la mano de obra','key'),
     cell('Retraso de balance','<span>'+fmt(R.d,1)+'</span><small>%</small>','Mano de obra ociosa')
   ];
-  var rate=num(state.rate);
-  if(rate>0){
-    var Ch=u==='s'?m.C/3600:m.C/60;
-    cells.push(cell('Mano de obra por pieza',fmt(R.N*Ch*rate),'N × C × costo por hora'));
-  }
   $('#summary').innerHTML=cells.join('');
   renderStations(m,R);renderWeights(m,R);renderDiagram(m,R);renderCompare(m);renderCalc(m,R);
+}
+
+/* ---------- PDF ---------- */
+function hsl2rgb(h,s,l){
+  s/=100;l/=100;
+  var a=s*Math.min(l,1-l);
+  var f=function(n){var k=(n+h/30)%12;return l-a*Math.max(-1,Math.min(k-3,9-k,1));};
+  return [Math.round(f(0)*255),Math.round(f(8)*255),Math.round(f(4)*255)];
+}
+function pdfText(s){
+  return String(s==null?'':s)
+    .replace(/<sub>(.*?)<\/sub>/g,'_$1').replace(/<[^>]+>/g,'')
+    .replace(/Σ\s*/g,'suma de ').replace(/[‐-―−]/g,'-')
+    .replace(/[‘’]/g,"'").replace(/[“”]/g,'"').replace(/…/g,'...').replace(/≈/g,'~')
+    .replace(/[^\u0000-ÿ]/g,'?');
+}
+function pdfMsg(t){var e=$('#pdfmsg');e.textContent=t||'';e.hidden=!t;}
+
+function makePdf(){
+  pdfMsg('');
+  var m=window.__model;if(!m)return;
+  var J=window.jspdf&&window.jspdf.jsPDF;
+  if(!J){pdfMsg('No se pudo cargar el generador de PDF. Revise su conexión a internet y recargue la página.');return;}
+  var R=m.all[state.heur],u=m.u;
+  var doc=new J({unit:'mm',format:'letter'});
+  var PW=doc.internal.pageSize.getWidth(),PH=doc.internal.pageSize.getHeight();
+  var M=18,CW=PW-2*M,y=M,BOT=PH-M-4,PT=0.3528;
+  var INK=[20,32,48],MUT=[75,91,108],LINE=[210,217,225],ACC=[194,65,12],TRK=[227,232,238];
+  var T=pdfText;
+  function col(c){doc.setTextColor(c[0],c[1],c[2]);}
+  function font(sz,bold){doc.setFont('helvetica',bold?'bold':'normal');doc.setFontSize(sz);}
+  function need(h){if(y+h>BOT){doc.addPage();y=M;return true;}return false;}
+  function para(text,sz,o){
+    o=o||{};font(sz,o.bold);col(o.color||INK);
+    var lh=sz*PT*1.4,w=o.w||CW,x=o.x||M;
+    doc.splitTextToSize(T(text),w).forEach(function(ln){need(lh);doc.text(ln,x,y+sz*PT);y+=lh;});
+    y+=o.after||0;
+  }
+  function h2(text){
+    need(18);y+=4;
+    doc.setDrawColor(INK[0],INK[1],INK[2]);doc.setLineWidth(0.5);doc.line(M,y,PW-M,y);y+=2;
+    para(text,12,{bold:true,after:2.5});
+  }
+  function table(cols,rows){
+    var sz=8.5,lh=sz*PT*1.35,pad=1.6,W=cols.map(function(c){return c.w*CW;});
+    var heads=cols.map(function(c){return c.h;});
+    function lines(c,i){return doc.splitTextToSize(T(c),W[i]-2*pad);}
+    function rowH(cells){font(sz,false);var mx=1;cells.forEach(function(c,i){mx=Math.max(mx,lines(c,i).length);});return mx*lh+2*pad*0.7;}
+    function draw(cells,head,fill,bold){
+      var h=rowH(cells);
+      if(need(h)&&!head)draw(heads,true);
+      if(fill){doc.setFillColor(fill[0],fill[1],fill[2]);doc.rect(M,y,CW,h,'F');}
+      font(head?7.5:sz,head||bold);col(head?MUT:INK);
+      var x=M;
+      cells.forEach(function(c,i){
+        lines(c,i).forEach(function(ln,k){
+          var ty=y+pad*0.7+lh*(k+0.78);
+          if(cols[i].al==='r')doc.text(ln,x+W[i]-pad,ty,{align:'right'});else doc.text(ln,x+pad,ty);
+        });
+        x+=W[i];
+      });
+      var lc=head?MUT:LINE;doc.setDrawColor(lc[0],lc[1],lc[2]);doc.setLineWidth(head?0.35:0.2);
+      doc.line(M,y+h,M+CW,y+h);y+=h;
+    }
+    draw(heads,true);
+    rows.forEach(function(r){var o=Array.isArray(r)?{cells:r}:r;draw(o.cells,false,o.fill,o.bold);});
+    y+=2;
+  }
+  function drawDiagram(){
+    var Ly=layoutDiagram(m),sc=Math.min(CW/Ly.W,0.28,(BOT-M-30)/Ly.H);
+    var w=Ly.W*sc,hh=Ly.H*sc,r=Ly.r*sc,ah=Math.max(1.4,r*0.3);
+    need(hh+6);
+    var ox=M+(CW-w)/2,oy=y;
+    doc.setDrawColor(154,167,181);doc.setFillColor(154,167,181);doc.setLineWidth(0.25);
+    m.succs.forEach(function(list,i){list.forEach(function(j){
+      var x1=ox+Ly.pos[i].x*sc+r,y1=oy+Ly.pos[i].y*sc,x2=ox+Ly.pos[j].x*sc-r-ah,y2=oy+Ly.pos[j].y*sc;
+      var d=Math.max(26*sc,(x2-x1)*0.45);
+      doc.lines([[d,0,x2-d-x1,y2-y1,x2-x1,y2-y1]],x1,y1,[1,1],'S');
+      doc.triangle(x2,y2-ah*0.45,x2,y2+ah*0.45,x2+ah,y2,'F');
+    });});
+    var fs=Math.max(5.5,Math.min(9,r*1.7));
+    m.ids.forEach(function(id,i){
+      var cx=ox+Ly.pos[i].x*sc,cy=oy+Ly.pos[i].y*sc,si=R.stOf[i],c=hsl2rgb(hue(si),50,33);
+      doc.setFillColor(c[0],c[1],c[2]);doc.circle(cx,cy,r,'F');
+      font(id.length>2?fs*0.75:fs,true);doc.setTextColor(255,255,255);doc.text(T(id),cx,cy+fs*PT*0.36,{align:'center'});
+      font(fs*0.8,false);col(INK);doc.text(fmt(m.t[i]),cx,cy-r-0.8,{align:'center'});
+      col(MUT);doc.text('E'+(si+1),cx,cy+r+fs*PT*0.9,{align:'center'});
+    });
+    y+=hh+2;
+    para('Sobre cada nodo se indica el tiempo de la tarea en '+u+'. El color y la etiqueta E1, E2... indican la estación asignada.',8,{color:MUT});
+  }
+  function drawStations(){
+    var C=m.C,step=niceStep(C),barH=5.4;
+    need(26);
+    font(7,false);col(MUT);
+    for(var k=0;k*step<C-1e-9;k++){
+      var v=k*step;if(v>0&&(C-v)/C<0.07)continue;
+      var x=M+v/C*CW;
+      doc.setDrawColor(LINE[0],LINE[1],LINE[2]);doc.setLineWidth(0.2);doc.line(x,y+3.2,x,y+4.4);
+      doc.text(fmt(v),x,y+2.6,{align:k===0?'left':'center'});
+    }
+    font(7,true);col(ACC);doc.text('C = '+fmt(C)+' '+u,M+CW,y+2.6,{align:'right'});
+    y+=5;
+    R.stations.forEach(function(st,si){
+      var names=(st.tasks.length>1?'Tareas ':'Tarea ')+st.tasks.map(function(i){return m.ids[i];}).join(', ');
+      font(8.5,true);
+      var ls=doc.splitTextToSize(T(names),CW-76),hh=Math.max(4.4,ls.length*3.9);
+      need(hh+barH+6);
+      var c=hsl2rgb(hue(si),50,33);
+      doc.setFillColor(c[0],c[1],c[2]);doc.rect(M,y,9,4.4,'F');
+      font(7.5,true);doc.setTextColor(255,255,255);doc.text('E'+(si+1),M+4.5,y+3.1,{align:'center'});
+      font(8.5,true);col(INK);ls.forEach(function(ln,k){doc.text(ln,M+11,y+3.2+k*3.9);});
+      font(7.5,false);col(MUT);
+      doc.text(T(fmt(st.time)+' / '+fmt(C)+' '+u+'  ·  muerto '+fmt(st.idle)+'  ·  carga '+fmt(st.time/C*100,0)+' %'),M+CW,y+3.2,{align:'right'});
+      var by=y+hh+1;
+      doc.setFillColor(TRK[0],TRK[1],TRK[2]);doc.rect(M,by,CW,barH,'F');
+      var x=M;
+      st.tasks.forEach(function(i){
+        var w=m.t[i]/C*CW;
+        doc.setFillColor(c[0],c[1],c[2]);doc.setDrawColor(255,255,255);doc.setLineWidth(0.3);doc.rect(x,by,w,barH,'FD');
+        if(w>=4.5){font(7.5,true);doc.setTextColor(255,255,255);doc.text(T(m.ids[i]),x+w/2,by+barH*0.68,{align:'center'});}
+        x+=w;
+      });
+      if(st.idle>1e-9){doc.setFillColor(200,208,216);doc.rect(x,by,M+CW-x,barH,'F');}
+      doc.setDrawColor(ACC[0],ACC[1],ACC[2]);doc.setLineWidth(0.8);doc.line(M+CW,by,M+CW,by+barH);
+      y=by+barH+3.5;
+    });
+    para('Cada bloque es una tarea, dibujada a escala del tiempo de ciclo. La zona gris es tiempo muerto y la línea naranja marca C.',8,{color:MUT});
+  }
+
+  /* Encabezado */
+  font(8,true);col(MUT);doc.text('ESTUDIO DEL TRABAJO  ·  BALANCEO DE LÍNEA',M,y+3);y+=7;
+  para(state.title.trim()||'Estudio de balanceo de línea',19,{bold:true,after:1.5});
+  var fecha;
+  try{fecha=new Date().toLocaleDateString('es-MX',{day:'numeric',month:'long',year:'numeric'});}catch(e){fecha=new Date().toISOString().slice(0,10);}
+  var meta=[];
+  if(state.author.trim())meta.push('Elaboró: '+state.author.trim());
+  meta.push('Fecha: '+fecha);meta.push('Regla de asignación: '+HNAME[state.heur]);
+  para(meta.join('   ·   '),9,{color:MUT,after:1});
+
+  h2('1. Enunciado del problema');
+  var st0=state.statement.trim();
+  if(st0)st0.split(/\n+/).forEach(function(p){para(p,10,{after:1.5});});
+  else para('No se capturó el enunciado del problema.',9.5,{color:MUT});
+
+  h2('2. Datos del problema');
+  var cinfo=state.cmode==='demanda'?'Calculado con la demanda: '+fmt(num(state.disp))+' min disponibles por día para '+fmt(num(state.prod))+' piezas por día':'Dato del problema';
+  var dat=[
+    ['Tiempo de ciclo C',fmt(m.C)+' '+u,cinfo],
+    ['Contenido de trabajo T',fmt(m.T)+' '+u,'Suma de los tiempos de las '+m.n+' tareas'],
+    ['Estaciones mínimas',String(m.Nt),'T ÷ C = '+fmt(m.raw)+', redondeado al entero superior']];
+  table([{h:'Dato',w:.30},{h:'Valor',w:.18,al:'r'},{h:'Origen',w:.52}],dat);
+  table([{h:'Tarea',w:.08},{h:'Descripción',w:.36},{h:'Tiempo ('+u+')',w:.12,al:'r'},{h:'Predecesoras',w:.16},{h:'Sucesoras',w:.12,al:'r'},{h:'Peso posicional',w:.16,al:'r'}],
+    m.ids.map(function(id,i){
+      return [id,m.names[i]||'',fmt(m.t[i]),m.preds[i].map(function(p){return m.ids[p];}).join(', ')||'-',String(m.cnt[i]),fmt(m.w[i])];
+    }));
+
+  h2('3. Diagrama de precedencia');
+  drawDiagram();
+
+  h2('4. Resultados');
+  var res=[
+    ['Estaciones asignadas',String(R.N),R.N===m.Nt?'Igual al mínimo teórico ('+m.Nt+')':'Mínimo teórico: '+m.Nt],
+    ['Eficiencia',fmt(R.E,1)+' %','T ÷ (N × C) × 100'],
+    ['Retraso de balance',fmt(R.d,1)+' %','TM ÷ (N × C) × 100'],
+    ['Tiempo muerto total',fmt(R.TM)+' '+u,'N × C - T'],
+    ['Estación más lenta',fmt(R.maxTime)+' '+u,'Estación '+R.bn.map(function(i){return 'E'+(i+1);}).join(', ')]];
+  table([{h:'Indicador',w:.30},{h:'Valor',w:.18,al:'r'},{h:'Cálculo',w:.52}],res);
+  var minN=Math.min.apply(null,['rpw','lot','sot','mns'].map(function(k){return m.all[k].N;}));
+  var worst=R.stations.reduce(function(a,s,i){return s.idle>R.stations[a].idle?i:a;},0);
+  var txt='Con la regla de '+HNAME[state.heur].toLowerCase()+' la línea necesita '+R.N+' estaciones'+(R.N===m.Nt?', que coincide con el mínimo teórico.':', frente a un mínimo teórico de '+m.Nt+'.')+
+    ' La eficiencia es '+fmt(R.E,1)+' % y el retraso de balance '+fmt(R.d,1)+' %: de los '+fmt(R.N*m.C)+' '+u+' de tiempo de estación disponibles por pieza, '+fmt(R.TM)+' '+u+' quedan sin uso.'+
+    ' La estación más cargada es '+R.bn.map(function(i){return 'E'+(i+1);}).join(', ')+' con '+fmt(R.maxTime)+' '+u+' de trabajo, y la de más tiempo muerto es E'+(worst+1)+' ('+fmt(R.stations[worst].idle)+' '+u+').';
+  if(minN<R.N)txt+=' Otra de las reglas comparadas logra '+minN+' estaciones; conviene revisarla en la sección 6.';
+  para(txt,9.5,{after:1});
+
+  h2('5. Asignación de tareas a estaciones');
+  para('Regla aplicada: '+HNAME[state.heur]+'. '+pdfText(HRULE[state.heur]).replace(HNAME[state.heur]+'.','').trim(),9,{color:MUT,after:2.5});
+  drawStations();
+
+  h2('6. Comparación de reglas');
+  var keys=['rpw','lot','sot','mns'];
+  table([{h:'Regla',w:.26},{h:'Estaciones',w:.14,al:'r'},{h:'Eficiencia',w:.15,al:'r'},{h:'Retraso',w:.15,al:'r'},{h:'Tiempo muerto',w:.15,al:'r'},{h:'Más lenta',w:.15,al:'r'}],
+    keys.map(function(k){
+      var Q=m.all[k];
+      return {cells:[HNAME[k]+(k===state.heur?' (usada)':''),String(Q.N),fmt(Q.E,1)+' %',fmt(Q.d,1)+' %',fmt(Q.TM)+' '+u,fmt(Q.maxTime)+' '+u],fill:k===state.heur?TRK:null,bold:k===state.heur};
+    }));
+  para('Mínimo teórico: '+m.Nt+' estaciones.',8.5,{color:MUT});
+
+  h2('7. Desarrollo numérico');
+  calcRows(m,R).forEach(function(r){
+    para(r[0],9,{bold:true});
+    para(r[1],9,{after:1.8});
+  });
+
+  h2('8. Referencias');
+  Array.prototype.forEach.call(document.querySelectorAll('.refs li'),function(li){
+    para(li.textContent.replace(/\s+/g,' ').trim(),8.5,{after:1.2});
+  });
+
+  var pages=doc.getNumberOfPages();
+  for(var p=1;p<=pages;p++){
+    doc.setPage(p);font(7.5,false);col(MUT);
+    doc.text('Estudio de balanceo de línea',M,PH-9);
+    doc.text('Página '+p+' de '+pages,PW-M,PH-9,{align:'right'});
+  }
+  var slug=T(state.title).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,60)||'estudio-balanceo-de-linea';
+  doc.save(slug+'.pdf');
 }
 
 /* ---------- Formulario ---------- */
@@ -607,9 +804,9 @@ function renderRows(){
   }).join('');
 }
 function syncInputs(){
-  $('#preset').value=$('#preset').value;
+  $('#ititle').value=state.title;$('#iauthor').value=state.author;$('#istatement').value=state.statement;
   $('#unit').value=state.unit;
-  $('#disp').value=state.disp;$('#prod').value=state.prod;$('#cdirect').value=state.cdirect;$('#rate').value=state.rate;
+  $('#disp').value=state.disp;$('#prod').value=state.prod;$('#cdirect').value=state.cdirect;
   $('#cm-demanda').checked=state.cmode==='demanda';$('#cm-directo').checked=state.cmode==='directo';
   $('#box-demanda').hidden=state.cmode!=='demanda';$('#box-directo').hidden=state.cmode!=='directo';
   ['rpw','lot','sot','mns'].forEach(function(k){$('#h-'+k).checked=state.heur===k;});
@@ -623,6 +820,10 @@ function update(){
   var res=analyze(),u=state.unit==='s'?'s':'min';
   var errs=$('#errors');
   $('#chint').innerHTML=res.C>0?'Tiempo de ciclo <b>C = '+fmt(res.C)+' '+u+'</b>':'';
+  if(isEmptyForm()){
+    errs.hidden=true;errs.innerHTML='';
+    $('#out').hidden=true;$('#placeholder').hidden=false;window.__model=null;return;
+  }
   if(res.errors.length){
     errs.innerHTML=res.errors.map(function(e){return '<li>'+esc(e)+'</li>';}).join('');
     errs.hidden=false;$('#out').hidden=true;$('#placeholder').hidden=false;
@@ -652,9 +853,11 @@ $('#add').addEventListener('click',function(){
   renderRows();update();
   var inp=$('#r'+(state.tasks.length-1)+'-t');if(inp)inp.focus();
 });
-$('#preset').addEventListener('change',function(e){
-  loadPreset(e.target.value,{rate:state.rate,heur:state.heur});
-  syncInputs();renderRows();update();
+[['ititle','title'],['iauthor','author'],['istatement','statement']].forEach(function(p){
+  $('#'+p[0]).addEventListener('input',function(e){state[p[1]]=e.target.value;});
+});
+$('#pdf').addEventListener('click',function(){
+  try{makePdf();}catch(e){pdfMsg('No se pudo generar el PDF. Revise los datos e intente de nuevo.');if(window.console)console.error(e);}
 });
 $('#unit').addEventListener('change',function(e){state.unit=e.target.value;setUnits();update();});
 Array.prototype.forEach.call(document.querySelectorAll('input[name=cmode]'),function(r){
@@ -663,14 +866,13 @@ Array.prototype.forEach.call(document.querySelectorAll('input[name=cmode]'),func
     $('#box-demanda').hidden=state.cmode!=='demanda';$('#box-directo').hidden=state.cmode!=='directo';update();
   });
 });
-['disp','prod','cdirect','rate'].forEach(function(k){
+['disp','prod','cdirect'].forEach(function(k){
   $('#'+k).addEventListener('input',function(e){state[k]=e.target.value;update();});
 });
 Array.prototype.forEach.call(document.querySelectorAll('input[name=heur]'),function(r){
   r.addEventListener('change',function(e){state.heur=e.target.value;if(window.__model)renderResults();});
 });
 
-loadPreset('pc');
 syncInputs();renderRows();update();
 })();
 </script>
