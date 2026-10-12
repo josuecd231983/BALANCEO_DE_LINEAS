@@ -174,6 +174,12 @@ textarea:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .btn.primary:hover{filter:brightness(1.08);border-color:var(--accent)}
 .bh .tools{display:flex;align-items:center;flex-wrap:wrap;gap:.5rem 1rem}
 .pdfmsg{margin:-.4rem 0 .9rem;padding:.5rem .7rem;background:var(--bad-soft);color:var(--bad);border:1px solid var(--bad);border-radius:4px;font-size:.84rem}
+.pdfbar{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem 1rem;margin-bottom:1.2rem}
+.pdfbar .hint{margin:0}
+.pdfbar-panel{margin:1.3rem 0 .6rem}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.primary:disabled:hover{filter:none}
+.tbl td.l{text-align:left;font-family:var(--f-body);font-size:.84rem;color:var(--ink2)}
 </style>
 </head>
 <body>
@@ -238,18 +244,41 @@ textarea:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
         <p class="hint">En <b>Predec.</b> escriba las predecesoras inmediatas separadas por coma, por ejemplo <b>3, 4</b>. Déjelo vacío si la tarea puede empezar sola.</p>
       </fieldset>
 
+      <fieldset class="grp">
+        <legend>Operarios requeridos (opcional)</legend>
+        <label class="f" for="ieff">Eficiencia esperada de operación (%)
+          <input id="ieff" type="number" min="0" max="100" step="any" inputmode="decimal" placeholder="Opcional"></label>
+        <p class="hint">Es la utilización con la que espera que opere la línea en la práctica. Si la captura, se calcula cuántos operarios cubren la producción con esa eficiencia. Sin ella, la aplicación calcula el mínimo teórico y los operarios asignados.</p>
+      </fieldset>
+
       <ul class="errors" id="errors" role="alert" hidden></ul>
+
+      <div class="pdfbar pdfbar-panel">
+        <button type="button" class="btn primary pdfbtn" disabled>Descargar estudio en PDF</button>
+        <span class="hint pdfhint">Se habilita cuando los datos estén completos y sin errores.</span>
+      </div>
+      <p class="pdfmsg" role="status" hidden></p>
     </section>
 
     <!-- Resultados -->
     <div class="results">
+      <div class="pdfbar">
+        <button type="button" class="btn primary pdfbtn" disabled>Descargar estudio en PDF</button>
+        <span class="hint pdfhint">Se habilita cuando los datos estén completos y sin errores.</span>
+      </div>
+      <p class="pdfmsg" role="status" hidden></p>
       <div class="empty" id="placeholder">Escriba el enunciado, el tiempo de ciclo y las tareas con sus tiempos y predecesoras. El balanceo aparece aquí cuando los datos estén completos y sin errores.</div>
 
       <div id="out">
         <section class="block" aria-labelledby="h-res">
-          <div class="bh"><h2 id="h-res">Resultado</h2><div class="tools"><span class="step">Pasos 4, 5, 7 y 8</span><button type="button" class="btn primary" id="pdf">Descargar estudio en PDF</button></div></div>
-          <p class="pdfmsg" id="pdfmsg" role="status" hidden></p>
+          <div class="bh"><h2 id="h-res">Resultado</h2><span class="step">Pasos 4, 5, 7 y 8</span></div>
           <div class="strip" id="summary"></div>
+        </section>
+
+        <section class="block" aria-labelledby="h-op">
+          <div class="bh"><h2 id="h-op">Operarios requeridos</h2><span class="step">Pasos 5 y 7</span></div>
+          <div class="scroll" id="ops"></div>
+          <p class="hint" id="opsnote"></p>
         </section>
 
         <section class="block" aria-labelledby="h-asig">
@@ -333,7 +362,7 @@ var HRULE={
   mns:'<b>Más sucesoras.</b> Entra primero la tarea con más tareas siguientes, directas e indirectas. Los empates se resuelven por mayor duración.'
 };
 
-var state={unit:'min',cmode:'demanda',disp:'',prod:'',cdirect:'',heur:'rpw',title:'',author:'',statement:'',
+var state={unit:'min',cmode:'demanda',disp:'',prod:'',cdirect:'',eff:'',heur:'rpw',title:'',author:'',statement:'',
   tasks:[1,2,3].map(function(n){return {id:String(n),name:'',t:'',preds:''};})};
 
 /* Una fila que solo trae el número automático se ignora */
@@ -354,6 +383,8 @@ function analyze(){
     var c=num(state.cdirect);
     if(c>0)C=c;else errors.push('Indique un tiempo de ciclo mayor que cero.');
   }
+  var effS=String(state.eff).trim();
+  if(effS){var ef=num(effS);if(!(ef>0&&ef<=100))errors.push('La eficiencia esperada debe estar entre 0 y 100 %.');}
   if(!rows.length)errors.push('Agregue al menos una tarea.');
   var idMap={},ids=[];
   rows.forEach(function(r,i){
@@ -441,7 +472,7 @@ function analyze(){
   var all={rpw:run('rpw'),lot:run('lot'),sot:run('sot'),mns:run('mns')};
   var raw=T/C;
   return {errors:[],n:n,ids:ids,names:rows.map(function(r){return r.name;}),t:t,preds:preds,succs:succs,
-    w:w,cnt:cnt,level:level,T:T,C:C,raw:raw,Nt:Math.ceil(raw-1e-9),all:all,u:state.unit==='s'?'s':'min'};
+    w:w,cnt:cnt,level:level,T:T,C:C,raw:raw,Nt:Math.ceil(raw-1e-9),all:all,eff:(effS?num(effS):0),u:state.unit==='s'?'s':'min'};
 }
 
 /* ---------- Dibujo ---------- */
@@ -564,6 +595,30 @@ function renderCalc(m,R){
   $('#calc').innerHTML=calcRows(m,R).map(function(r){return '<div><dt>'+r[0]+'</dt><dd>'+r[1]+'</dd></div>';}).join('');
 }
 
+function opsRows(m,R){
+  var rows=[];
+  var c1='N<sub>t</sub> = T ÷ C = '+fmt(m.T)+' ÷ '+fmt(m.C)+' = '+fmt(m.raw);
+  if(state.cmode==='demanda')c1+=' (equivale a T × producción ÷ tiempo disponible = '+fmt(m.T)+' × '+fmt(num(state.prod))+' ÷ '+(state.unit==='s'?'('+fmt(num(state.disp))+' × 60)':fmt(num(state.disp)))+')';
+  rows.push(['Mínimo teórico',c1+', entero superior',m.Nt]);
+  rows.push(['Asignados con la regla '+HNAME[state.heur].toLowerCase(),'Un operario por estación: N = '+R.N+' estaciones',R.N]);
+  rows.push(['Operarios sobre el mínimo',R.N+' − '+m.Nt+' = '+(R.N-m.Nt),R.N-m.Nt]);
+  if(m.eff>0){
+    var q=m.T/(m.C*m.eff/100);
+    rows.push(['Para una eficiencia esperada de '+fmt(m.eff,1)+' %','N = T ÷ (C × E) = '+fmt(m.T)+' ÷ ('+fmt(m.C)+' × '+fmt(m.eff/100,3)+') = '+fmt(q)+', entero superior',Math.ceil(q-1e-9)]);
+  }
+  return rows;
+}
+function opsNote(m,R){
+  var n='Se supone un operario por estación y tiempos estándar, con tolerancias y valoración del ritmo.';
+  if(m.eff>0)n+=' La eficiencia esperada es la utilización con la que se prevé operar la línea. El resultado se redondea hacia arriba para no quedar corto de capacidad. Para comparar, el balanceo calculado alcanza '+fmt(R.E,1)+' %.';
+  return n;
+}
+function renderOps(m,R){
+  $('#ops').innerHTML='<table class="tbl"><thead><tr><th>Concepto</th><th>Cálculo</th><th>Operarios</th></tr></thead><tbody>'+
+    opsRows(m,R).map(function(r){return '<tr><td>'+esc(r[0])+'</td><td class="l">'+r[1]+'</td><td class="sel">'+r[2]+'</td></tr>';}).join('')+'</tbody></table>';
+  $('#opsnote').textContent=opsNote(m,R);
+}
+
 function renderResults(){
   var m=window.__model,R=m.all[state.heur],u=m.u;
   $('#rule').innerHTML=HRULE[state.heur];
@@ -580,7 +635,7 @@ function renderResults(){
     cell('Retraso de balance','<span>'+fmt(R.d,1)+'</span><small>%</small>','Mano de obra ociosa')
   ];
   $('#summary').innerHTML=cells.join('');
-  renderStations(m,R);renderWeights(m,R);renderDiagram(m,R);renderCompare(m);renderCalc(m,R);
+  renderStations(m,R);renderWeights(m,R);renderDiagram(m,R);renderCompare(m);renderCalc(m,R);renderOps(m,R);
 }
 
 /* ---------- PDF ---------- */
@@ -597,7 +652,11 @@ function pdfText(s){
     .replace(/[‘’]/g,"'").replace(/[“”]/g,'"').replace(/…/g,'...').replace(/≈/g,'~')
     .replace(/[^\u0000-ÿ]/g,'?');
 }
-function pdfMsg(t){var e=$('#pdfmsg');e.textContent=t||'';e.hidden=!t;}
+function pdfMsg(t){Array.prototype.forEach.call(document.querySelectorAll('.pdfmsg'),function(e){e.textContent=t||'';e.hidden=!t;});}
+function pdfReady(on){
+  Array.prototype.forEach.call(document.querySelectorAll('.pdfbtn'),function(b){b.disabled=!on;});
+  Array.prototype.forEach.call(document.querySelectorAll('.pdfhint'),function(h){h.hidden=on;});
+}
 
 function makePdf(){
   pdfMsg('');
@@ -754,14 +813,19 @@ function makePdf(){
   var txt='Con la regla de '+HNAME[state.heur].toLowerCase()+' la línea necesita '+R.N+' estaciones'+(R.N===m.Nt?', que coincide con el mínimo teórico.':', frente a un mínimo teórico de '+m.Nt+'.')+
     ' La eficiencia es '+fmt(R.E,1)+' % y el retraso de balance '+fmt(R.d,1)+' %: de los '+fmt(R.N*m.C)+' '+u+' de tiempo de estación disponibles por pieza, '+fmt(R.TM)+' '+u+' quedan sin uso.'+
     ' La estación más cargada es '+R.bn.map(function(i){return 'E'+(i+1);}).join(', ')+' con '+fmt(R.maxTime)+' '+u+' de trabajo, y la de más tiempo muerto es E'+(worst+1)+' ('+fmt(R.stations[worst].idle)+' '+u+').';
-  if(minN<R.N)txt+=' Otra de las reglas comparadas logra '+minN+' estaciones; conviene revisarla en la sección 6.';
+  if(minN<R.N)txt+=' Otra de las reglas comparadas logra '+minN+' estaciones; conviene revisarla en la sección 7.';
   para(txt,9.5,{after:1});
 
-  h2('5. Asignación de tareas a estaciones');
+  h2('5. Operarios requeridos');
+  table([{h:'Concepto',w:.28},{h:'Cálculo',w:.56},{h:'Operarios',w:.16,al:'r'}],
+    opsRows(m,R).map(function(r){return [r[0],r[1],String(r[2])];}));
+  para(opsNote(m,R),8.5,{color:MUT});
+
+  h2('6. Asignación de tareas a estaciones');
   para('Regla aplicada: '+HNAME[state.heur]+'. '+pdfText(HRULE[state.heur]).replace(HNAME[state.heur]+'.','').trim(),9,{color:MUT,after:2.5});
   drawStations();
 
-  h2('6. Comparación de reglas');
+  h2('7. Comparación de reglas');
   var keys=['rpw','lot','sot','mns'];
   table([{h:'Regla',w:.26},{h:'Estaciones',w:.14,al:'r'},{h:'Eficiencia',w:.15,al:'r'},{h:'Retraso',w:.15,al:'r'},{h:'Tiempo muerto',w:.15,al:'r'},{h:'Más lenta',w:.15,al:'r'}],
     keys.map(function(k){
@@ -770,13 +834,13 @@ function makePdf(){
     }));
   para('Mínimo teórico: '+m.Nt+' estaciones.',8.5,{color:MUT});
 
-  h2('7. Desarrollo numérico');
+  h2('8. Desarrollo numérico');
   calcRows(m,R).forEach(function(r){
     para(r[0],9,{bold:true});
     para(r[1],9,{after:1.8});
   });
 
-  h2('8. Referencias');
+  h2('9. Referencias');
   Array.prototype.forEach.call(document.querySelectorAll('.refs li'),function(li){
     para(li.textContent.replace(/\s+/g,' ').trim(),8.5,{after:1.2});
   });
@@ -806,7 +870,7 @@ function renderRows(){
 function syncInputs(){
   $('#ititle').value=state.title;$('#iauthor').value=state.author;$('#istatement').value=state.statement;
   $('#unit').value=state.unit;
-  $('#disp').value=state.disp;$('#prod').value=state.prod;$('#cdirect').value=state.cdirect;
+  $('#disp').value=state.disp;$('#prod').value=state.prod;$('#cdirect').value=state.cdirect;$('#ieff').value=state.eff;
   $('#cm-demanda').checked=state.cmode==='demanda';$('#cm-directo').checked=state.cmode==='directo';
   $('#box-demanda').hidden=state.cmode!=='demanda';$('#box-directo').hidden=state.cmode!=='directo';
   ['rpw','lot','sot','mns'].forEach(function(k){$('#h-'+k).checked=state.heur===k;});
@@ -822,16 +886,16 @@ function update(){
   $('#chint').innerHTML=res.C>0?'Tiempo de ciclo <b>C = '+fmt(res.C)+' '+u+'</b>':'';
   if(isEmptyForm()){
     errs.hidden=true;errs.innerHTML='';
-    $('#out').hidden=true;$('#placeholder').hidden=false;window.__model=null;return;
+    $('#out').hidden=true;$('#placeholder').hidden=false;window.__model=null;pdfReady(false);return;
   }
   if(res.errors.length){
     errs.innerHTML=res.errors.map(function(e){return '<li>'+esc(e)+'</li>';}).join('');
     errs.hidden=false;$('#out').hidden=true;$('#placeholder').hidden=false;
-    window.__model=null;return;
+    window.__model=null;pdfReady(false);return;
   }
   errs.hidden=true;errs.innerHTML='';
   $('#placeholder').hidden=true;$('#out').hidden=false;
-  window.__model=res;renderResults();
+  window.__model=res;pdfReady(true);renderResults();
 }
 
 $('#rows').addEventListener('input',function(e){
@@ -856,8 +920,10 @@ $('#add').addEventListener('click',function(){
 [['ititle','title'],['iauthor','author'],['istatement','statement']].forEach(function(p){
   $('#'+p[0]).addEventListener('input',function(e){state[p[1]]=e.target.value;});
 });
-$('#pdf').addEventListener('click',function(){
-  try{makePdf();}catch(e){pdfMsg('No se pudo generar el PDF. Revise los datos e intente de nuevo.');if(window.console)console.error(e);}
+Array.prototype.forEach.call(document.querySelectorAll('.pdfbtn'),function(b){
+  b.addEventListener('click',function(){
+    try{makePdf();}catch(e){pdfMsg('No se pudo generar el PDF. Revise los datos e intente de nuevo.');if(window.console)console.error(e);}
+  });
 });
 $('#unit').addEventListener('change',function(e){state.unit=e.target.value;setUnits();update();});
 Array.prototype.forEach.call(document.querySelectorAll('input[name=cmode]'),function(r){
@@ -869,6 +935,7 @@ Array.prototype.forEach.call(document.querySelectorAll('input[name=cmode]'),func
 ['disp','prod','cdirect'].forEach(function(k){
   $('#'+k).addEventListener('input',function(e){state[k]=e.target.value;update();});
 });
+$('#ieff').addEventListener('input',function(e){state.eff=e.target.value;update();});
 Array.prototype.forEach.call(document.querySelectorAll('input[name=heur]'),function(r){
   r.addEventListener('change',function(e){state.heur=e.target.value;if(window.__model)renderResults();});
 });
