@@ -278,7 +278,7 @@ textarea:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
         <section class="block" aria-labelledby="h-op">
           <div class="bh"><h2 id="h-op">Operarios requeridos</h2><span class="step">Pasos 5 y 7</span></div>
           <div class="scroll" id="ops"></div>
-          <p class="hint"><strong>Operarios por operación</strong></p>
+          <p class="hint"><strong>Operarios por estación de trabajo</strong></p>
           <div class="scroll" id="opsop"></div>
           <p class="hint" id="opsnote"></p>
         </section>
@@ -604,8 +604,8 @@ var FORMS=[
   ['Índice de producción (García Criollo)','IP = unidades a fabricar ÷ tiempo disponible = 1 ÷ C','Piezas por unidad de tiempo que debe entregar la línea.'],
   ['Operarios teóricos','NOT = TE × IP, redondeado al entero superior','TE es el tiempo estándar total (T). Con E = 1 es equivalente a N<sub>t</sub>.'],
   ['Operarios con eficiencia planeada','NO = TE × IP ÷ E, redondeado al entero superior','E se usa como decimal (85 % = 0.85).'],
-  ['Operarios por operación','NO<sub>op</sub> = TE<sub>op</sub> × IP ÷ E','Se calcula para cada tarea. La suma por operación es solo una referencia.'],
-  ['Operarios asignados','Un operario por estación: operarios = N;  sobre el mínimo = N − N<sub>t</sub>','Supone una persona por estación de trabajo.']
+  ['Operarios por estación','NO<sub>k</sub> = TE<sub>k</sub> × IP ÷ E, redondeado al entero superior (mínimo 1)','TE<sub>k</sub> es el tiempo estándar de la estación k. Con E = 1 cada estación requiere un operario.'],
+  ['Total de operarios','Operarios = Σ NO<sub>k</sub> de todas las estaciones;  sobre el mínimo = operarios − N<sub>t</sub>','Se suman los operarios de cada estación de trabajo.']
 ];
 function renderForms(){
   $('#forms').innerHTML=FORMS.map(function(r){return '<div><dt>'+r[0]+'</dt><dd><strong>'+r[1]+'</strong><br><span class="hint">'+r[2]+'</span></dd></div>';}).join('');
@@ -640,30 +640,31 @@ function opsRows(m,R){
     var E=m.eff/100,q=m.T*ip/E;
     rows.push(['Con eficiencia planeada E = '+fmt(E,3),'NO = TE × IP ÷ E = '+fmt(m.T)+' × '+fmt(ip,6)+' ÷ '+fmt(E,3)+' = '+fmt(q)+', entero superior',Math.ceil(q-1e-9)]);
   }
-  rows.push(['Asignados con la regla '+HNAME[state.heur].toLowerCase(),'Un operario por estación: N = '+R.N+' estaciones',R.N]);
-  rows.push(['Operarios sobre el mínimo',R.N+' − '+m.Nt+' = '+(R.N-m.Nt),R.N-m.Nt]);
+  var sr=opsStationRows(m,R),tot=+sr[sr.length-1][4];
+  rows.push(['Total sumando las estaciones ('+HNAME[state.heur].toLowerCase()+')','Σ NO de las '+R.N+' estaciones (tabla siguiente)',tot]);
+  rows.push(['Operarios sobre el mínimo',tot+' − '+m.Nt+' = '+(tot-m.Nt),tot-m.Nt]);
   return rows;
 }
-function opsTaskRows(m){
+function opsStationRows(m,R){
   var ip=1/m.C,E=m.eff>0?m.eff/100:1,rows=[],sum=0,sumNR=0;
-  m.ids.forEach(function(id,i){
-    var no=m.t[i]*ip/E,nr=Math.ceil(no-1e-9);sum+=no;sumNR+=nr;
-    rows.push([id,fmt(m.t[i]),fmt(no,3),String(nr)]);
+  R.stations.forEach(function(st,k){
+    var no=st.time*ip/E,nr=Math.max(1,Math.ceil(no-1e-9));sum+=no;sumNR+=nr;
+    rows.push(['E'+(k+1),st.tasks.map(function(i){return m.ids[i];}).join(', '),fmt(st.time),fmt(no,3),String(nr)]);
   });
-  rows.push(['Total',fmt(m.T),fmt(sum,3),String(sumNR)]);
+  rows.push(['Total','',fmt(m.T),fmt(sum,3),String(sumNR)]);
   return rows;
 }
 function opsNote(m,R){
-  var n='Fórmulas de García Criollo (2005): IP = unidades a fabricar ÷ tiempo disponible y NO = TE × IP ÷ E, donde TE es el tiempo estándar y E la eficiencia planeada. El número real de operarios se redondea al entero superior. Se supone un operario por estación. La suma por operación es solo una referencia: al agrupar tareas en estaciones, el total requerido es el de la tabla superior.';
+  var n='Fórmulas de García Criollo (2005): IP = unidades a fabricar ÷ tiempo disponible y NO = TE × IP ÷ E, donde TE es el tiempo estándar y E la eficiencia planeada (como fracción: 85 % = 0.85). El número real de operarios de cada estación se redondea al entero superior y el total de operarios es la suma de las estaciones. La fila "Con eficiencia planeada" de la primera tabla aplica la fórmula al total sin redondear por estación.';
   if(!(m.eff>0))n+=' Sin eficiencia planeada, E = 1.';
   return n;
 }
 function renderOps(m,R){
   $('#ops').innerHTML='<table class="tbl"><thead><tr><th>Concepto</th><th>Cálculo</th><th>Resultado</th></tr></thead><tbody>'+
     opsRows(m,R).map(function(r){return '<tr><td>'+esc(r[0])+'</td><td class="l">'+r[1]+'</td><td class="sel">'+r[2]+'</td></tr>';}).join('')+'</tbody></table>';
-  var o=opsTaskRows(m);
-  $('#opsop').innerHTML='<table class="tbl"><thead><tr><th>Tarea</th><th>TEop ('+m.u+')</th><th>NO = TEop × IP ÷ E</th><th>Operarios (entero superior)</th></tr></thead><tbody>'+
-    o.map(function(r,i){var last=i===o.length-1;return '<tr><td'+(last?' class="sel"':'')+'>'+esc(r[0])+'</td><td>'+r[1]+'</td><td'+(last?' class="sel"':'')+'>'+r[2]+'</td><td class="sel">'+r[3]+'</td></tr>';}).join('')+'</tbody></table>';
+  var o=opsStationRows(m,R);
+  $('#opsop').innerHTML='<table class="tbl"><thead><tr><th>Estación</th><th>Tareas</th><th>TE de la estación ('+m.u+')</th><th>NO = TE × IP ÷ E</th><th>Operarios (entero superior)</th></tr></thead><tbody>'+
+    o.map(function(r,i){var last=i===o.length-1;return '<tr><td'+(last?' class="sel"':'')+'>'+esc(r[0])+'</td><td class="l">'+esc(r[1])+'</td><td>'+r[2]+'</td><td'+(last?' class="sel"':'')+'>'+r[3]+'</td><td class="sel">'+r[4]+'</td></tr>';}).join('')+'</tbody></table>';
   $('#opsnote').textContent=opsNote(m,R);
 }
 
@@ -867,8 +868,8 @@ function makePdf(){
   h2('5. Operarios requeridos');
   table([{h:'Concepto',w:.28},{h:'Cálculo',w:.56},{h:'Resultado',w:.16,al:'r'}],
     opsRows(m,R).map(function(r){return [r[0],r[1],String(r[2])];}));
-  var otr=opsTaskRows(m);
-  table([{h:'Tarea',w:.15},{h:'TEop ('+u+')',w:.2,al:'r'},{h:'NO = TEop × IP ÷ E',w:.35,al:'r'},{h:'Operarios (entero superior)',w:.3,al:'r'}],
+  var otr=opsStationRows(m,R);
+  table([{h:'Estación',w:.12},{h:'Tareas',w:.26},{h:'TE ('+u+')',w:.14,al:'r'},{h:'NO = TE × IP ÷ E',w:.24,al:'r'},{h:'Operarios',w:.24,al:'r'}],
     otr.map(function(r,i){return {cells:r,bold:i===otr.length-1};}));
   para(opsNote(m,R),8.5,{color:MUT});
 
