@@ -246,9 +246,9 @@ textarea:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 
       <fieldset class="grp">
         <legend>Operarios requeridos (opcional)</legend>
-        <label class="f" for="ieff">Eficiencia esperada de operación (%)
-          <input id="ieff" type="number" min="0" max="100" step="any" inputmode="decimal" placeholder="Opcional"></label>
-        <p class="hint">Es la utilización con la que espera que opere la línea en la práctica. Si la captura, se calcula cuántos operarios cubren la producción con esa eficiencia. Sin ella, la aplicación calcula el mínimo teórico y los operarios asignados.</p>
+        <label class="f" for="ieff">Eficiencia planeada (E)
+          <input id="ieff" type="number" min="0" max="100" step="any" inputmode="decimal" placeholder="Opcional (0.85 u 85)"></label>
+        <p class="hint">Escríbala como decimal (0.85) o como porcentaje (85). Es la eficiencia con la que planea operar la línea. Sin ella, los operarios se calculan con E = 1.</p>
       </fieldset>
 
       <ul class="errors" id="errors" role="alert" hidden></ul>
@@ -278,6 +278,8 @@ textarea:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
         <section class="block" aria-labelledby="h-op">
           <div class="bh"><h2 id="h-op">Operarios requeridos</h2><span class="step">Pasos 5 y 7</span></div>
           <div class="scroll" id="ops"></div>
+          <p class="hint"><strong>Operarios por operación</strong></p>
+          <div class="scroll" id="opsop"></div>
           <p class="hint" id="opsnote"></p>
         </section>
 
@@ -315,6 +317,11 @@ textarea:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
           <p class="hint" id="cmpnote"></p>
         </section>
 
+        <section class="block" aria-labelledby="h-form">
+          <div class="bh"><h2 id="h-form">Fórmulas utilizadas</h2><span class="step">Estaciones y operarios</span></div>
+          <dl class="calc" id="forms"></dl>
+        </section>
+
         <section class="block" aria-labelledby="h-calc">
           <div class="bh"><h2 id="h-calc">Desarrollo numérico</h2><span class="step">Con los datos actuales</span></div>
           <dl class="calc" id="calc"></dl>
@@ -329,6 +336,7 @@ textarea:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
         </div>
         <ul class="refs">
           <li>Baybars, I. (1986). A survey of exact algorithms for the simple assembly line balancing problem. <em>Management Science, 32</em>(8), 909–932.</li>
+          <li>García Criollo, R. (2005). <em>Estudio del trabajo: ingeniería de métodos y medición del trabajo</em> (2.ª ed.). McGraw-Hill.</li>
           <li>Jacobs, F. R., y Chase, R. B. (2014). <em>Administración de operaciones: producción y cadena de suministros.</em> McGraw-Hill.</li>
           <li>Meyers, F. E., y Stephens, M. P. (2006). <em>Diseño de instalaciones de manufactura y manejo de materiales.</em> Pearson Prentice Hall.</li>
           <li>Nahmias, S. (2014). <em>Análisis de la producción y las operaciones.</em> McGraw-Hill.</li>
@@ -383,8 +391,13 @@ function analyze(){
     var c=num(state.cdirect);
     if(c>0)C=c;else errors.push('Indique un tiempo de ciclo mayor que cero.');
   }
-  var effS=String(state.eff).trim();
-  if(effS){var ef=num(effS);if(!(ef>0&&ef<=100))errors.push('La eficiencia esperada debe estar entre 0 y 100 %.');}
+  var effS=String(state.eff).trim(),effPct=0;
+  if(effS){
+    var ef=num(effS);
+    if(ef>0&&ef<=1)effPct=ef*100;
+    else if(ef>1&&ef<=100)effPct=ef;
+    else errors.push('La eficiencia debe ser un decimal entre 0 y 1 (por ejemplo 0.85) o un porcentaje hasta 100 (por ejemplo 85).');
+  }
   if(!rows.length)errors.push('Agregue al menos una tarea.');
   var idMap={},ids=[];
   rows.forEach(function(r,i){
@@ -472,7 +485,7 @@ function analyze(){
   var all={rpw:run('rpw'),lot:run('lot'),sot:run('sot'),mns:run('mns')};
   var raw=T/C;
   return {errors:[],n:n,ids:ids,names:rows.map(function(r){return r.name;}),t:t,preds:preds,succs:succs,
-    w:w,cnt:cnt,level:level,T:T,C:C,raw:raw,Nt:Math.ceil(raw-1e-9),all:all,eff:(effS?num(effS):0),u:state.unit==='s'?'s':'min'};
+    w:w,cnt:cnt,level:level,T:T,C:C,raw:raw,Nt:Math.ceil(raw-1e-9),all:all,eff:effPct,u:state.unit==='s'?'s':'min'};
 }
 
 /* ---------- Dibujo ---------- */
@@ -577,6 +590,27 @@ function renderCompare(m){
   $('#cmpnote').textContent='Mínimo teórico: '+m.Nt+' estaciones. '+(allSame?'Las cuatro reglas llegan al mismo número de estaciones.':'Las reglas no coinciden, así que conviene comparar antes de elegir.');
 }
 
+var FORMS=[
+  ['Tiempo de ciclo (paso 4)','C = tiempo disponible ÷ producción requerida','Con el tiempo disponible en segundos (minutos × 60) si los tiempos de las tareas están en segundos. También puede capturarse directamente.'],
+  ['Contenido de trabajo','T = Σ t<sub>i</sub>','Suma de los tiempos estándar de todas las tareas.'],
+  ['Estaciones mínimas (paso 5)','N<sub>t</sub> = T ÷ C, redondeado al entero superior','Cota inferior: ninguna asignación puede usar menos estaciones.'],
+  ['Peso posicional','PP<sub>i</sub> = t<sub>i</sub> + Σ t<sub>j</sub> de todas las sucesoras de i','Incluye sucesoras directas e indirectas. Se asigna primero la tarea con mayor PP.'],
+  ['Número de sucesoras','S<sub>i</sub> = cantidad de tareas que dependen de i, directa o indirectamente','Con la regla de más sucesoras, el empate se resuelve con la tarea de mayor tiempo.'],
+  ['Asignación a una estación (paso 6)','Una tarea i es asignable si todas sus predecesoras ya están asignadas y t<sub>acum</sub> + t<sub>i</sub> ≤ C','La estación se cierra cuando ninguna tarea disponible cabe en el tiempo restante C − t<sub>acum</sub>. Entre las asignables se elige según la regla activa.'],
+  ['Tiempo de cada estación','T<sub>k</sub> = Σ t<sub>i</sub> de las tareas de la estación k;  tiempo muerto de la estación = C − T<sub>k</sub>','N es el número de estaciones que resultan al terminar la asignación.'],
+  ['Tiempo muerto total','TM = N × C − T','Equivale a la suma de los tiempos muertos de todas las estaciones.'],
+  ['Eficiencia (paso 7)','E = T ÷ (N × C) × 100','Porcentaje del tiempo de estación disponible que se usa en trabajo.'],
+  ['Retraso de balance (paso 8)','d = TM ÷ (N × C) × 100 = 100 − E','Porcentaje del tiempo de estación que queda sin usar.'],
+  ['Índice de producción (García Criollo)','IP = unidades a fabricar ÷ tiempo disponible = 1 ÷ C','Piezas por unidad de tiempo que debe entregar la línea.'],
+  ['Operarios teóricos','NOT = TE × IP, redondeado al entero superior','TE es el tiempo estándar total (T). Con E = 1 es equivalente a N<sub>t</sub>.'],
+  ['Operarios con eficiencia planeada','NO = TE × IP ÷ E, redondeado al entero superior','E se usa como decimal (85 % = 0.85).'],
+  ['Operarios por operación','NO<sub>op</sub> = TE<sub>op</sub> × IP ÷ E','Se calcula para cada tarea. La suma por operación es solo una referencia.'],
+  ['Operarios asignados','Un operario por estación: operarios = N;  sobre el mínimo = N − N<sub>t</sub>','Supone una persona por estación de trabajo.']
+];
+function renderForms(){
+  $('#forms').innerHTML=FORMS.map(function(r){return '<div><dt>'+r[0]+'</dt><dd><strong>'+r[1]+'</strong><br><span class="hint">'+r[2]+'</span></dd></div>';}).join('');
+}
+
 function calcRows(m,R){
   var u=m.u,rows=[],N=R.N;
   if(state.cmode==='demanda'){
@@ -596,26 +630,40 @@ function renderCalc(m,R){
 }
 
 function opsRows(m,R){
-  var rows=[];
-  var c1='N<sub>t</sub> = T ÷ C = '+fmt(m.T)+' ÷ '+fmt(m.C)+' = '+fmt(m.raw);
-  if(state.cmode==='demanda')c1+=' (equivale a T × producción ÷ tiempo disponible = '+fmt(m.T)+' × '+fmt(num(state.prod))+' ÷ '+(state.unit==='s'?'('+fmt(num(state.disp))+' × 60)':fmt(num(state.disp)))+')';
-  rows.push(['Mínimo teórico',c1+', entero superior',m.Nt]);
+  var u=m.u,ip=1/m.C,rows=[];
+  var ipTxt=state.cmode==='demanda'
+    ?'IP = unidades a fabricar ÷ tiempo disponible = '+fmt(num(state.prod))+' ÷ '+(state.unit==='s'?'('+fmt(num(state.disp))+' × 60)':fmt(num(state.disp)))+' = '+fmt(ip,6)+' piezas/'+u
+    :'IP = 1 ÷ C = 1 ÷ '+fmt(m.C)+' = '+fmt(ip,6)+' piezas/'+u;
+  rows.push(['Índice de producción',ipTxt,fmt(ip,6)]);
+  rows.push(['Operarios teóricos (E = 1)','NOT = TE × IP = '+fmt(m.T)+' × '+fmt(ip,6)+' = '+fmt(m.T*ip)+', entero superior',m.Nt]);
+  if(m.eff>0){
+    var E=m.eff/100,q=m.T*ip/E;
+    rows.push(['Con eficiencia planeada E = '+fmt(E,3),'NO = TE × IP ÷ E = '+fmt(m.T)+' × '+fmt(ip,6)+' ÷ '+fmt(E,3)+' = '+fmt(q)+', entero superior',Math.ceil(q-1e-9)]);
+  }
   rows.push(['Asignados con la regla '+HNAME[state.heur].toLowerCase(),'Un operario por estación: N = '+R.N+' estaciones',R.N]);
   rows.push(['Operarios sobre el mínimo',R.N+' − '+m.Nt+' = '+(R.N-m.Nt),R.N-m.Nt]);
-  if(m.eff>0){
-    var q=m.T/(m.C*m.eff/100);
-    rows.push(['Para una eficiencia esperada de '+fmt(m.eff,1)+' %','N = T ÷ (C × E) = '+fmt(m.T)+' ÷ ('+fmt(m.C)+' × '+fmt(m.eff/100,3)+') = '+fmt(q)+', entero superior',Math.ceil(q-1e-9)]);
-  }
+  return rows;
+}
+function opsTaskRows(m){
+  var ip=1/m.C,E=m.eff>0?m.eff/100:1,rows=[],sum=0,sumNR=0;
+  m.ids.forEach(function(id,i){
+    var no=m.t[i]*ip/E,nr=Math.ceil(no-1e-9);sum+=no;sumNR+=nr;
+    rows.push([id,fmt(m.t[i]),fmt(no,3),String(nr)]);
+  });
+  rows.push(['Total',fmt(m.T),fmt(sum,3),String(sumNR)]);
   return rows;
 }
 function opsNote(m,R){
-  var n='Se supone un operario por estación y tiempos estándar, con tolerancias y valoración del ritmo.';
-  if(m.eff>0)n+=' La eficiencia esperada es la utilización con la que se prevé operar la línea. El resultado se redondea hacia arriba para no quedar corto de capacidad. Para comparar, el balanceo calculado alcanza '+fmt(R.E,1)+' %.';
+  var n='Fórmulas de García Criollo (2005): IP = unidades a fabricar ÷ tiempo disponible y NO = TE × IP ÷ E, donde TE es el tiempo estándar y E la eficiencia planeada. El número real de operarios se redondea al entero superior. Se supone un operario por estación. La suma por operación es solo una referencia: al agrupar tareas en estaciones, el total requerido es el de la tabla superior.';
+  if(!(m.eff>0))n+=' Sin eficiencia planeada, E = 1.';
   return n;
 }
 function renderOps(m,R){
-  $('#ops').innerHTML='<table class="tbl"><thead><tr><th>Concepto</th><th>Cálculo</th><th>Operarios</th></tr></thead><tbody>'+
+  $('#ops').innerHTML='<table class="tbl"><thead><tr><th>Concepto</th><th>Cálculo</th><th>Resultado</th></tr></thead><tbody>'+
     opsRows(m,R).map(function(r){return '<tr><td>'+esc(r[0])+'</td><td class="l">'+r[1]+'</td><td class="sel">'+r[2]+'</td></tr>';}).join('')+'</tbody></table>';
+  var o=opsTaskRows(m);
+  $('#opsop').innerHTML='<table class="tbl"><thead><tr><th>Tarea</th><th>TEop ('+m.u+')</th><th>NO = TEop × IP ÷ E</th><th>Operarios (entero superior)</th></tr></thead><tbody>'+
+    o.map(function(r,i){var last=i===o.length-1;return '<tr><td'+(last?' class="sel"':'')+'>'+esc(r[0])+'</td><td>'+r[1]+'</td><td'+(last?' class="sel"':'')+'>'+r[2]+'</td><td class="sel">'+r[3]+'</td></tr>';}).join('')+'</tbody></table>';
   $('#opsnote').textContent=opsNote(m,R);
 }
 
@@ -635,7 +683,7 @@ function renderResults(){
     cell('Retraso de balance','<span>'+fmt(R.d,1)+'</span><small>%</small>','Mano de obra ociosa')
   ];
   $('#summary').innerHTML=cells.join('');
-  renderStations(m,R);renderWeights(m,R);renderDiagram(m,R);renderCompare(m);renderCalc(m,R);renderOps(m,R);
+  renderStations(m,R);renderWeights(m,R);renderDiagram(m,R);renderCompare(m);renderCalc(m,R);renderOps(m,R);renderForms();
 }
 
 /* ---------- PDF ---------- */
@@ -817,8 +865,11 @@ function makePdf(){
   para(txt,9.5,{after:1});
 
   h2('5. Operarios requeridos');
-  table([{h:'Concepto',w:.28},{h:'Cálculo',w:.56},{h:'Operarios',w:.16,al:'r'}],
+  table([{h:'Concepto',w:.28},{h:'Cálculo',w:.56},{h:'Resultado',w:.16,al:'r'}],
     opsRows(m,R).map(function(r){return [r[0],r[1],String(r[2])];}));
+  var otr=opsTaskRows(m);
+  table([{h:'Tarea',w:.15},{h:'TEop ('+u+')',w:.2,al:'r'},{h:'NO = TEop × IP ÷ E',w:.35,al:'r'},{h:'Operarios (entero superior)',w:.3,al:'r'}],
+    otr.map(function(r,i){return {cells:r,bold:i===otr.length-1};}));
   para(opsNote(m,R),8.5,{color:MUT});
 
   h2('6. Asignación de tareas a estaciones');
@@ -834,13 +885,20 @@ function makePdf(){
     }));
   para('Mínimo teórico: '+m.Nt+' estaciones.',8.5,{color:MUT});
 
-  h2('8. Desarrollo numérico');
+  h2('8. Fórmulas utilizadas');
+  FORMS.forEach(function(r){
+    para(r[0],9,{bold:true,after:.3});
+    para(r[1],9,{after:.3});
+    para(r[2],8.5,{color:MUT,after:1.8});
+  });
+
+  h2('9. Desarrollo numérico');
   calcRows(m,R).forEach(function(r){
     para(r[0],9,{bold:true});
     para(r[1],9,{after:1.8});
   });
 
-  h2('9. Referencias');
+  h2('10. Referencias');
   Array.prototype.forEach.call(document.querySelectorAll('.refs li'),function(li){
     para(li.textContent.replace(/\s+/g,' ').trim(),8.5,{after:1.2});
   });
